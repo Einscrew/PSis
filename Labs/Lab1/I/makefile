@@ -4,4 +4,4 @@ I: I.o
 I.o: I.c
 	gcc -g -Wall -std=c99 -c $^
 clean:
-	rm I
+	rm -f I *.o
