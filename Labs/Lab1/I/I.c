@@ -1,43 +1,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int getSize(char * s){
-	int i = 0;
-	int size = 0;
-
-	while(s[i] != '\0'){
-		size++;
-		i++;
-	}
-	return size;
-}
-
-void cat (int *size, char * r, char *s){
-	int i = 0;
-	while(s[i] != '\0'){
-		r[(*size)++] = s[i++];
-	}
-}
 
 int main(int argc, char const *argv[])
 {
-	int i = 0;
+	int i,j = 0;
 	int size = 0;
-	char * result_str = NULL;
+	char * args = NULL;
 	
 	for(i=0; i < argc; i++){
-		size += getSize((char *)argv[i]);
-	}
+		args = (char*)realloc(args, size*sizeof(char)+sizeof(argv[i]));
 
-	result_str = (char *)malloc(sizeof(char)*++size);
-	result_str[size] ='\0';
-	
-	size = 0;
-	for(i=0; i < argc; i++){
-		cat(&size, result_str, (char *)argv[i]);
+		j=0;
+		while(argv[i][j] != '\0'){
+			args[size] = argv[i][j];
+			
+			size++;
+			j++;
+		}	
 	}
-	result_str[size] ='\0';
-	printf("%s\n", result_str);
+	args[size] ='\0';
+	printf("<<%s>>\n", args);
 	
 	return 0;
 }
