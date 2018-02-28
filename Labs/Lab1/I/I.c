@@ -6,21 +6,21 @@ int main(int argc, char const *argv[])
 {
 	int i,j = 0;
 	int size = 0;
-	char * args = NULL;
+	char * result_str = NULL;
 	
 	for(i=0; i < argc; i++){
-		args = (char*)realloc(args, size*sizeof(char)+sizeof(argv[i]));
+		result_str = (char*)realloc(result_str, size*sizeof(char)+sizeof(argv[i]));
 
 		j=0;
 		while(argv[i][j] != '\0'){
-			args[size] = argv[i][j];
+			result_str[size] = argv[i][j];
 			
 			size++;
 			j++;
 		}	
 	}
-	args[size] ='\0';
-	printf("<<%s>>\n", args);
+	result_str[size] ='\0';
+	printf("<<%s>>\n", result_str);
 	
 	return 0;
 }
