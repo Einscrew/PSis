@@ -18,13 +18,13 @@ int main(){
 	scanf("%d", &a);
 	if (a == 1){
 		/* load library test1 */
-		handle = dlopen("/home/einstein/IST/MSc/PSis/Labs/Lab1/IV/test1.so", RTLD_LAZY);
+		handle = dlopen("./test1.so", RTLD_LAZY);
 
 		printf("running the normal versions from \n");
 	}else{
 		if(a== 2){
 			/* load library test2 */
-			handle = dlopen("/home/einstein/IST/MSc/PSis/Labs/Lab1/IV/test2.so", RTLD_LAZY);
+			handle = dlopen("./test2.so", RTLD_LAZY);
 
 			printf("running the normal versions\n");
 		}else{
@@ -41,6 +41,7 @@ int main(){
 	dlerror();
 
 	f1 = (void (*)(void)) dlsym(handle, "func_1");
+	
 	f2 = (void (*)(void)) dlsym(handle, "func_2");
 	
 	f1();
