@@ -5,3 +5,6 @@ inf_loop: infinite-loop.o
 
 infinite-loop.o: infinite-loop.c
 	gcc -c $^ $(FLAGS)
+
+clean:
+	rm -f *.o inf_loop

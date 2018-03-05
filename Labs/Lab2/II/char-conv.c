@@ -26,5 +26,6 @@ int main(){
 
 	printf("Converted string: %s", v2);
 
+	free(v2);
 
 }

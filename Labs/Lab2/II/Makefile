@@ -5,3 +5,6 @@ char-conv: char-conv.o
 
 char-conv.o: char-conv.c
 	gcc -c $^ $(FLAGS)
+
+clean:
+	rm -f *.o char-conv core
