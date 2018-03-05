@@ -1,0 +1,10 @@
+Using the pipes and filters architecture and several linux commands, count the number of
+processes the a certain user is running in the linux computer.
+In Unix/Linux most utility programs can be used as filters, and pipes (the connection
+between filters) is represented by the character |
+To accomplish this objective used the following utility programs:
+• wc
+• grep
+• ps
+Use the man command to understand what each program does and what should be the
+correct arguments.

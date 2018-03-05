@@ -1,0 +1,3 @@
+In the previous exercises (III and IV) we identifies three different memory allocation
+related errors.
+Describe why the programs managed to run correctly even in the presence of these errors:
