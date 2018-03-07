@@ -1,10 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define CORRECT 1
-
-
-
 int main(){
 	int v[100];
 	int i;
