@@ -8,3 +8,7 @@ To accomplish this objective used the following utility programs:
 • ps
 Use the man command to understand what each program does and what should be the
 correct arguments.
+
+$ ps -aueinstein | wc -l
+$ ps -aux | awk '($1=="einstein") {print}' | wc -l
+$ ps -aux | awk '($1=="einstein") {print}' > proc && wc -l proc
