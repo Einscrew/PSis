@@ -7,4 +7,4 @@ IV.o: IV.c
 	gcc -c $^ $(FLAGS)
 
 clean:
-	rm -f *.*o
+	rm -f *.*o IV
