@@ -26,12 +26,7 @@ int main(int argc, char const *argv[]) {
 
 
   int status;
-  pid_t pid;
-  while (n > 0) {
-    pid = wait(&status);
-  //printf("Child with PID %ld exited with status 0x%x.\n", (long)pid, status);
-    --n;  // TODO(pts): Remove pid from the pids array.
-  }
+  while (wait(&status) > 0) {}
 
 
   return 0;

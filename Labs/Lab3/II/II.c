@@ -16,15 +16,33 @@ int main(int argc, char const *argv[]) {
       printf("Error on iter. %d\n", i);
     }else if(pids[i] == 0){
       srand(time(NULL)*getpid());
-      long int r = random()%RAND_MAX /(RAND_MAX/10);
+      //long int r = random()%RAND_MAX /(RAND_MAX/10);
+      int r = rand()%10;
       sleep(r);
-      printf("child will sleep %ld s\t[%d]\n", r, i);
+      //printf("child will sleep %ld s\t[%d]\n", r, i);
       exit(r);
     }
-
   }
 
+  int status, pid;
+  while (1) {
+    if((pid=wait(&status)) != -1){
+      printf("[%ld] died and slept %ds.\n", (long)pid, WEXITSTATUS(status));
+      if(fork() == 0){
+        srand(time(NULL)*getpid());
+        //long int r = random()%RAND_MAX /(RAND_MAX/10);
+        int r = rand()%10;
+        sleep(r);
+        //printf("child will sleep %ld s\t[%d]\n", r, i);
+        exit(r);
+      }
 
+    }else{
+      printf("No more childs\n");
+    }
+  }
+
+/*
   int status;
   pid_t pid;
   int s = 0;
@@ -40,7 +58,7 @@ int main(int argc, char const *argv[]) {
     }
 
   }
-  printf("Master will sleep %ds\n", s);
+  printf("Master will sleep %ds\n", s);*/
   //sleep(39);
 
 
