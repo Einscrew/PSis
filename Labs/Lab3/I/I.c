@@ -16,7 +16,8 @@ int main(int argc, char const *argv[]) {
       printf("Error on iter. %d\n", i);
     }else if(pids[i] == 0){
       srand(time(NULL)*getpid());
-      long int r = random()%RAND_MAX /(RAND_MAX/10);
+      int r = rand() % 10;
+      //long int r = random()%RAND_MAX /(RAND_MAX/10);
       sleep(r);
       printf("child will sleep %ld s\t[%d]\n", r, i);
       exit(0);
