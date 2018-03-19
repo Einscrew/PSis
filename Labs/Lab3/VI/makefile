@@ -7,4 +7,4 @@ lab3-mult-debug.o: lab3-mult-debug.c
 	gcc -c $^ $(FLAGS)
 
 clean:
-	rm -d *.*o VI
+	rm -f *.*o VI
