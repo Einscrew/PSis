@@ -13,20 +13,20 @@ int main(){
 		fork();
 
 		mypid = getpid();
-		printf("SON my PID is %d\n", mypid);
+		printf("[SON] my PID is %d\n", mypid);
 		kill(mypid, SIGSTOP);
 		for(i=0; i<10; i++){
-			printf("SON %d %d\n", mypid, i);
+			printf("[SON] %d %d\n", mypid, i);
 		}
-		printf("SON Exiting %d\n", mypid);
+		printf("[SON] Exiting %d\n", mypid);
 	}
 	else{
 		mypid = getpid();
 
-		printf("PARENT my PID is %d\n", mypid);
+		printf("[PARENT] my PID is %d\n", mypid);
 
 		kill(mypid, SIGSTOP);
-		printf("PARENT Exiting %d\n", mypid);
+		printf("[PARENT] Exiting %d\n", mypid);
 
 	}
 	exit(0);
