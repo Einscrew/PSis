@@ -6,5 +6,8 @@ IV: IV.o
 IV.o: IV.c
 	gcc -c $^ $(FLAGS)
 
+execute: execute.c
+	gcc -o $@ $^ $(FLAGS)
+	
 clean:
 	rm -f *.*o IV

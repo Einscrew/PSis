@@ -2,3 +2,4 @@ echo ola
 echo adeus
 find ../../../../ I.c > /dev/null
 find ../../../../../ I.c > /dev/null
+find ../../../../../../ I.c > /dev/null
