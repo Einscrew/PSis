@@ -1,4 +1,6 @@
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -7,8 +9,8 @@
 #include <time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-
-
+#include <string.h>
+#include <errno.h>
 
 /*
 def isPrime(i):
@@ -27,20 +29,22 @@ int isPrime(long int p){
     }
   }
   return 1;
-
 }
 
 int main(int argc, char const *argv[]) {
   int pid, i;
   int stat;
+  int setSize = atoi(argv[2]) -1 ;
+  long int r = -1;
+  int msPipe[2];
+  int smPipe[2];
+
   if(argv[1] == NULL || argv[2] == NULL){
     printf("Usage %s <#slaves> <lenght of set>\n", argv[0]);
     return 0;
   }
 
-  int msPipe[2];
-  int smPipe[2];
-  if (pipe2(msPipe, O_NONBLOCK) != 0 || pipe(smPipe) != 0 ) {
+  if (pipe(msPipe) != 0 || pipe(smPipe) != 0 ) {
     printf("Pipe problems\n");
     return 0;
   }
@@ -49,11 +53,15 @@ int main(int argc, char const *argv[]) {
   for( i=0; i < atoi(argv[1]); i++){
     if( (pid = fork()) == 0){
       long int v;
-      while (read(msPipe[0], &v, 1) > 0) {
+      int ret = 0;
+      while ((ret = read(msPipe[0], &v, 1)) > 0) {
           printf("receiving %ld\n", v);
-        if(isPrime(v)){
-          printf("[SON %d] %d\n", (int)i, (int)v);
+        if(isPrime(v)){write(1,"", 7);
+          printf("[SON %d] %ld\n", (int)i, v);
         }
+      }
+      if(ret == -1){
+        printf("ERROR@%d\t-%s\n",i, strerror(errno));
       }
       return EXIT_SUCCESS;
 
@@ -62,19 +70,25 @@ int main(int argc, char const *argv[]) {
     }
   }
 
-  int setSize = atoi(argv[2]) -1 ;
-  long int r = -1;
 
   while (setSize > 0) {
-    r = (long int) rand()%99999;
+    memset(&r, 0, 1);
+    r = (long int) rand();
+
     printf("sending %ld\n", r);
     write(msPipe[1],&r, 1);
     setSize--;
   }
-
-  while ( wait(&stat) != -1) {
+  if(close(msPipe[1]) == -1){
+      printf("ERROR closing pipe\n");
+      return -1;
   }
-  close(msPipe[1]);
-  close(msPipe[0]);
+
+  while ( wait(&stat) != -1) { }
+
+  if(close(msPipe[0]) == -1){
+      printf("ERROR closing pipe\n");
+      return -1;
+  }
   return 0;
 }
