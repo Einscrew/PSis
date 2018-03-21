@@ -24,7 +24,7 @@ def isPrime(i):
 int isPrime(long int p){
   int i = 2;
   while (i < p) {
-    if( p%i == 0 ){
+    if(p%i == 0){
         return 0;
     }
   }
@@ -50,13 +50,14 @@ int main(int argc, char const *argv[]) {
   }
   srand(time(NULL));
 
+  /* Cria filhos */
   for( i=0; i < atoi(argv[1]); i++){
     if( (pid = fork()) == 0){
       long int v;
       int ret = 0;
       while ((ret = read(msPipe[0], &v, 1)) > 0) {
           printf("receiving %ld\n", v);
-        if(isPrime(v)){write(1,"", 7);
+        if(isPrime(v)){
           printf("[SON %d] %ld\n", (int)i, v);
         }
       }
@@ -70,10 +71,10 @@ int main(int argc, char const *argv[]) {
     }
   }
 
-
+  /* Lê todos os números enviados */
   while (setSize > 0) {
     memset(&r, 0, 1);
-    r = (long int) rand();
+    r = (long int) rand() % 100000;
 
     printf("sending %ld\n", r);
     write(msPipe[1],&r, 1);
