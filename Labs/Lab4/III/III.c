@@ -37,7 +37,9 @@ int main(int argc, char const *argv[]) {
   int stat;
   int setSize;
   long int r = -1;
+  int ret = 0;
   int ** msPipe;
+  int smPipe[2];
 
 
   if(argv[1] == NULL || argv[2] == NULL){
@@ -57,17 +59,26 @@ int main(int argc, char const *argv[]) {
     }
   }
 
+  if(pipe(smPipe) != 0 ) {
+    printf("Pipe problems\n");
+    return 0;
+  }
   srand(time(NULL));
 
   /* Cria filhos */
   for( i=0; i < numChilds; i++){
     if( (pid = fork()) == 0){
-      
-      long int v;
-      int ret = 0;
 
-      for (int j = 0; j < numChilds; j++)
-      {
+      long int v;
+      
+
+      if( close(smPipe[0]) == -1 ){
+         printf("ERROR@[0] - %d\t-%s\n", i, strerror(errno));
+         return -1;
+       }
+
+       //close pipes from other siblins
+      for (int j = 0; j < numChilds; j++){
         if(j != i){
            if( close(msPipe[j][0]) == -1 || close(msPipe[j][1]) == -1 ){
               printf("ERROR@[%d][x] - %d \t-%s\n",j,i, strerror(errno));
@@ -83,7 +94,11 @@ int main(int argc, char const *argv[]) {
 
       while ( (ret = read(msPipe[i][0], &v, sizeof(v)  )) > 0 ) {
         //printf("receiving %ld\n", v);
-        printf("[SON %d] isPrime(%ld)? %d\n", (int)i, v, isPrime(v));
+        if(isPrime(v)){
+          write(smPipe[1], &v, sizeof(v));
+        }
+
+        //printf("[SON %d] isPrime(%ld)? %d\n", (int)i, v, p );
 
       }
 
@@ -92,8 +107,6 @@ int main(int argc, char const *argv[]) {
         return EXIT_FAILURE;
       }
       else if( ret == 0){
-        //send sum
-
         return EXIT_SUCCESS;
       }
 
@@ -102,6 +115,13 @@ int main(int argc, char const *argv[]) {
       printf("Error crating slave %d\n", i);
     }
   }
+  //////////////////PARENT CODE
+
+  if( close(smPipe[1]) == -1 ){
+     printf("ERROR@[0] - %d\t-%s\n", i, strerror(errno));
+     return -1;
+  }
+
   for(i = 0; i < numChilds; i++){
     if(close(msPipe[i][0]) == -1){
         printf("ERROR closing pipe[0]@Parent\t-%s\n", strerror(errno));
@@ -129,8 +149,19 @@ int main(int argc, char const *argv[]) {
     }
   }
 
+  while ( (ret = read(smPipe[0], &r, sizeof(r)  )) > 0 ) {
+    printf("[PARENT] %ld\n", r );
+  }
+  if (ret == 0) {
+    printf("nada para ler\n" );
+  }
+
+
   while ( wait(&stat) != -1 ) {
     if(stat == EXIT_FAILURE){
+      printf("some child has problems\n");
+    }
+    else if( stat == EXIT_SUCCESS){
 
     }
   }
