@@ -14,29 +14,38 @@
 #include <sys/stat.h>
 
 
+/*
+octal    6   4   6
+binario 110 100 110
+what    rwx rwx rwx
+*/
+
 int main(int argc, char const *argv[]) {
 
   if(argv[1] == NULL){
     printf("Usage %s <fifo> \n", argv[0]);
     return 0;
   }
-  int fifo;
+  int fifo  = open(argv[1], 0444);
 
-  /*if( (fifo = open(argv[1], 'w')) == -1){
-      printf("Erro on open(): %s\nTrying to crate fifo...\n", strerror(errno));
-  }
-  else */
-  if( mkfifo(argv[1], S_IRWXU) ){
-      printf("Erro on mkfifo(): %s\n", strerror(errno));
-  }
-  if( (fifo = open("./fifo", S_IRWXU)) == -1){
-      printf("Erro on open(): %s\n", strerror(errno));
+  if( fifo == -1){
+      printf("ERRO: exiting\n");
+      return 1;
   }
 
-  write(fifo, "0", 1);
+  char line[100];
+  int n = 0;
+  while(1){
+      n = read(fifo, line, sizeof(line));
+      if(n <= 0){
+          printf("Exiting\n" );
+          break;
+      }
+      line[n-1] = '\0';
+      printf("%s\n", line);
+  }
 
   close(fifo);
-
 
   return 0;
 }
