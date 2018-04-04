@@ -2,6 +2,8 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
+
 int main(){
 
 		int fd = clipboard_connect("./");
@@ -9,12 +11,47 @@ int main(){
 		if(fd== -1){
 			exit(-1);
 		}
-		char dados[10];
+		char dados[10] = "";
 		int dados_int;
-		fgets(dados, 10, stdin);
-		write(fd, dados, 10);
-		read(fd+1, &dados_int, sizeof(dados_int));
-		printf("Received %d\n", dados_int);
+		/*while(1){
+			switch fgetc(){
+				case 'P':
+					
+					break;
+
+				case 'C':
+					fgets(dados, 10, stdin);
+					clipboard_copy(fd, 0, dados, sizeof(dados));
+					break;
+
+				default:
+					break;
+			}
+			
+		}*/
+		
+
+		clipboard_copy(fd, 0, "uma", 4);
+		sleep(1);
+
+		clipboard_copy(fd, 1, "dois", 5);
+sleep(1);
+		clipboard_copy(fd, 1, "over", 5);
+sleep(1);
+		clipboard_copy(fd, 3, "dois", 5);
+sleep(1);
+		clipboard_copy(fd, 4, "cinco", 6);
+sleep(1);
+
+
+		clipboard_paste(fd+1, 1, dados, sizeof(dados));
+
+
+
+		//write(fd, dados, 10);
+		//clipboard_paste(fd, 0, dados, &dados_int);
+		//read(fd+1, &dados_int, sizeof(dados_int));
+		//printf("Received %d\n", dados_int);
 		
 		exit(0);
 	}

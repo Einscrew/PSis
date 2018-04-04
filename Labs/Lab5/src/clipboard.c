@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <unistd.h>
+
 #include "clipboard.h"
 
  
@@ -41,15 +43,26 @@ int main(){
 	//criar FIFOS
 	
 	//abrir FIFOS
-	char data[10];
 	int len_data;
+	char clip[10][10];
+
+	Element inbox;
 	while(1){
+		memset(&inbox, 0, sizeof(Element));
 		printf(".\n");
-		read(fifo_in, data, 10);
-		printf("received %s\n", data);
-		len_data = strlen(data);
-		printf("sending value %d - legth %d\n", len_data, sizeof(len_data));
-		write(fifo_out, &len_data, sizeof(len_data));
+		read(fifo_in, &inbox, sizeof(Element));
+		printf("received %c\n", inbox.type);
+
+		if(inbox.type == 'C'){
+			memcpy(clip[(int)inbox.region], inbox.content, sizeof(inbox.content));
+			printf("copying: %s ---\n         %c\n         %d\n", inbox.content , inbox.type, inbox.region);
+
+		}else if(inbox.type == 'P'){
+			write(fifo_out, &clip[(int)inbox.region], sizeof(clip[(int)inbox.region]));
+			printf("pasted: %s\n", clip[(int)inbox.region]);
+
+		}
+
 	}
 		
 	exit(0);
