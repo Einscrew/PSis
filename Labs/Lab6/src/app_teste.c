@@ -8,9 +8,11 @@ int main(){
 
 		int fd = clipboard_connect("./");
 		
-		if(fd== -1){
+		
+		if(fd == -1){
 			exit(-1);
 		}
+		
 		char dados[10] = "";
 		int dados_int;
 		/*while(1){
@@ -53,5 +55,6 @@ sleep(1);
 		//read(fd+1, &dados_int, sizeof(dados_int));
 		//printf("Received %d\n", dados_int);
 		
+		close(fd);
 		exit(0);
 	}

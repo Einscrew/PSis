@@ -1,4 +1,4 @@
-#define CLIPBOARD_SOCKET "./abcdefghiclipSocket"
+#define CLIPBOARD_SOCKET "clipSocket"
 #include <sys/types.h>
 
 
