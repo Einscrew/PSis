@@ -1,7 +1,10 @@
 CC=gcc
-FLAGS=-Wall
+FLAGS=-Wall -g
 
-all: clipboard app
+all: clipboard app remoteBackup
+
+remoteBackup: remoteBackup.c library.o
+	$(CC) $^ -o $@ $(FLAGS) $(EXTRA)
 
 clipboard: clipboard.c library.o
 	$(CC) $^ -o $@ $(FLAGS) $(EXTRA)

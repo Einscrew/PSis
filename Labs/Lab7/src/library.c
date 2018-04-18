@@ -40,9 +40,11 @@ int clipboard_copy(int clipboard_id, int region, void *buf, size_t count){
 	Element e;
 	e.type = 'C';
 	e.region = region;
+	memset(e.content, 0, 100);
 	memcpy(e.content, buf, count);
-
+	
 	char *msg = (char*)malloc(sizeof(Element));
+
 	memcpy(msg, &e, sizeof(Element));
 	printf("write:%ld\n", sizeof(Element));
 	write(clipboard_id, msg, sizeof(Element));
@@ -56,8 +58,9 @@ int clipboard_paste(int clipboard_id, int region, void *buf, size_t count){
 	Element e;
 	e.type = 'P';
 	e.region = region;
+	memcpy(e.content, buf, count);
 	e.content[0] = '\0';
-
+	
 	char * msg = (char*)malloc(sizeof(Element));
 	memcpy(msg, &e, sizeof(Element));
 

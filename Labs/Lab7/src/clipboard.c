@@ -1,6 +1,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
- #include <sys/un.h>
+#include <sys/un.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 
 
 #include <errno.h>
@@ -15,12 +18,49 @@
 #include "clipboard.h"
 
  
+void syncBack(){
+	int bfd;
+	struct sockaddr_in my_addr;
+	
+
+	if((bfd = socket(AF_INET, SOCK_STREAM, 0) ) == -1){
+		printf("Couldn't open socket: %s\n", strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+
+
+	memset(&my_addr, 0, sizeof(struct sockaddr_in));
+	my_addr.sin_family = AF_INET;
+	my_addr.sin_port = htons(10101);
+	inet_aton("127.0.0.1", &my_addr.sin_addr);
+	
+
+	if(connect(bfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr_in))== -1){
+		printf("Couldn't open socket: %s\n", strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+	
+
+	//SYNC
+
+
+
+
+
+
+	close(bfd);
+
+}
+
 int main(){
-	int sfd, cfd, size, index=0;
+	int sfd, cfd, size, index=0 , region = -1;
 	char buf[10];
 	Element elmBuf;
+	char data[10][100];
+
 	char pathSocket[108];
 	
+	syncBack();	
 	sprintf(pathSocket, "./%s", CLIPBOARD_SOCKET);
 	struct sockaddr_un my_addr, cli_addr;
 	socklen_t cli_addrlen;
@@ -30,11 +70,10 @@ int main(){
 	if((sfd = socket(AF_UNIX, SOCK_STREAM, 0) ) == -1){
 		printf("Couldn't open socket: %s\n", strerror(errno));
 		exit(EXIT_FAILURE);
-	}
-
-	// when????????????
+	}	
 	
 	//bind()
+
 	memset(&my_addr, 0, sizeof(struct sockaddr_un));
 	my_addr.sun_family = AF_UNIX;
 	strncpy(my_addr.sun_path, pathSocket, sizeof(my_addr.sun_path)-1);
@@ -61,57 +100,44 @@ int main(){
 		printf("sizeof(Element):%ld\n", sizeof(Element));
 		index=0;
 		while((size = recv(cfd, &(buf), 10,0)) > 0){
-			printf("\nRead:%d\t index:%d\n", size, index);
+			
 			
 			/*
 			 __4___3__4,___
 			|1234|567|8,123|
 			*/	
 			if(index + size >= sizeof(Element)){
+				printf("\nFinal:Read:%d\t index:%d\n", size, index);
 				memcpy(&elmBuf+index, buf,  sizeof(Element) - index);
-				//save;
-				printf("type: %s ---\n         %c\n         %d\n", elmBuf.content , elmBuf.type, elmBuf.region);
-
 				if(index + size > sizeof(Element)){
 					memcpy(&elmBuf, &buf+(sizeof(Element) - index), size);
-					
 				}
+				//save;
+				region = elmBuf.region;
+				if(elmBuf.type == 'C'){
+					if(region <= 9 && region >= 0){
+						memcpy(data[region], &elmBuf.content, 100);
+						printf(">[%d] - %s\n", region, data[region] );
+					}
+				}
+				printf("type: %s ---\n         %c\n         %d\n", elmBuf.content , elmBuf.type, elmBuf.region);
+
 				index = 0;
 
 			}else{
+				printf("\nRead:%d\t index:%d\n", size, index);
 				memcpy(&elmBuf+index, &buf, size);
 				index+=size;
 			}
 
 		}
 
-
+		for(int i = 0; i < 10; i++){
+			printf("[%d] - %s\n", i, data[i] );
+		}
 		close(cfd);
 	}
 	close(sfd);
-	/*
-	int len_data;
-	char clip[10][10];
-
-	Element inbox;
-	while(1){
-		memset(&inbox, 0, sizeof(Element));
-		printf(".\n");
-		read(fifo_in, &inbox, sizeof(Element));
-		printf("received %c\n", inbox.type);
-
-		if(inbox.type == 'C'){
-			memcpy(clip[(int)inbox.region], inbox.content, sizeof(inbox.content));
-			printf("copying: %s ---\n         %c\n         %d\n", inbox.content , inbox.type, inbox.region);
-
-		}else if(inbox.type == 'P'){
-			write(fifo_out, &clip[(int)inbox.region], sizeof(clip[(int)inbox.region]));
-			printf("pasted: %s\n", clip[(int)inbox.region]);
-
-		}
-
-	}
-	*/	
 	exit(0);
 	
 }

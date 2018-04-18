@@ -5,8 +5,8 @@
 
 typedef struct element{
 	 char type;
-	 char region;
-	 char content[10];
+	 int region;
+	 char content[100];
 }Element;
 
 
