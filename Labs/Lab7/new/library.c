@@ -36,43 +36,58 @@ int clipboard_connect(char * clipboard_dir){
 }
 
 int clipboard_copy(int clipboard_id, int region, void *buf, size_t count){
-	int n = 0;
+	
 	Element e;
 	e.type = 'C';
 	e.region = region;
-	memset(e.content, 0, 100);
 	memcpy(e.content, buf, count);
-	e.content[count]='\0';
-	
-	char *msg = (char*)malloc(sizeof(Element));
 
+	char *msg = (char*)malloc(sizeof(Element));
 	memcpy(msg, &e, sizeof(Element));
 	printf("write:%ld\n", sizeof(Element));
-	while(n < sizeof(Element)){
-		printf("write\n");
-		n += write(clipboard_id, msg+n, sizeof(Element) - n);
-	}
-	printf("done\n");
+	write(clipboard_id, msg, sizeof(Element));
+
 	return 0;
 }
 
 
 int clipboard_paste(int clipboard_id, int region, void *buf, size_t count){
-	int n = 0;
+	
 	Element e;
 	e.type = 'P';
 	e.region = region;
-	memcpy(e.content, buf, count);
 	e.content[0] = '\0';
-	
+
 	char * msg = (char*)malloc(sizeof(Element));
 	memcpy(msg, &e, sizeof(Element));
 
-	while(n < sizeof(Element)){
-		n += write(clipboard_id, msg+n, sizeof(Element) - n);
+	write(clipboard_id, msg, sizeof(Element));
+
+	read(clipboard_id, buf, count);
+
+	return 1;
+}
+
+
+int sendMsg(Element * e, int fd){
+	char * msg = (char*)malloc(sizeof(Element));
+	Element el;
+	el.type='C';
+	el.region =1;
+	memcpy(el.content, "olaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\0", 100);
+
+	memcpy(msg, e, sizeof(Element));
+	int n, count=0;
+
+	while(count < sizeof(Element)){
+		printf("Attempts for sendMsg\n");
+		n = write(fd, msg, sizeof(Element));
+		if(n == -1){
+			printf("%s\n", strerror(errno));
+			return -1;
+		}
+		count += n;
+
 	}
-
-	//read(clipboard_id, buf, count);
-
 	return 1;
 }

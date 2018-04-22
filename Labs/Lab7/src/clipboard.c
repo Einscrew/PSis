@@ -44,10 +44,6 @@ void syncBack(){
 	//SYNC
 
 
-
-
-
-
 	close(bfd);
 
 }
@@ -57,10 +53,15 @@ int main(){
 	char buf[10];
 	Element elmBuf;
 	char data[10][100];
+	int i;
+	for (i = 0; i < 10; ++i)
+	{
+		data[i][0] = '\0';
+	}
 
 	char pathSocket[108];
 	
-	syncBack();	
+	//syncBack();	
 	sprintf(pathSocket, "./%s", CLIPBOARD_SOCKET);
 	struct sockaddr_un my_addr, cli_addr;
 	socklen_t cli_addrlen;
@@ -72,8 +73,6 @@ int main(){
 		exit(EXIT_FAILURE);
 	}	
 	
-	//bind()
-
 	memset(&my_addr, 0, sizeof(struct sockaddr_un));
 	my_addr.sun_family = AF_UNIX;
 	strncpy(my_addr.sun_path, pathSocket, sizeof(my_addr.sun_path)-1);
@@ -109,30 +108,35 @@ int main(){
 			if(index + size >= sizeof(Element)){
 				printf("\nFinal:Read:%d\t index:%d\n", size, index);
 				memcpy(&elmBuf+index, buf,  sizeof(Element) - index);
-				if(index + size > sizeof(Element)){
-					memcpy(&elmBuf, &buf+(sizeof(Element) - index), size);
-				}
 				//save;
 				region = elmBuf.region;
 				if(elmBuf.type == 'C'){
 					if(region <= 9 && region >= 0){
+						printf(">>>>[%d] - %s||\n", region, elmBuf.content );
 						memcpy(data[region], &elmBuf.content, 100);
-						printf(">[%d] - %s\n", region, data[region] );
+						printf(">[%d] - %s||\n", region, data[region] );
 					}
 				}
 				printf("type: %s ---\n         %c\n         %d\n", elmBuf.content , elmBuf.type, elmBuf.region);
 
+				if(index + size > sizeof(Element)){
+					memcpy(&elmBuf, &buf+(sizeof(Element) - index), size - (sizeof(Element) - index));
+				}
 				index = 0;
 
 			}else{
-				printf("\nRead:%d\t index:%d\n", size, index);
-				memcpy(&elmBuf+index, &buf, size);
+				printf("\nRead:%d\t index:%d buff:%s|\n", size, index, buf);
+				if(index >= sizeof(Element)){
+					printf("errorororo\n");
+				}else{
+					memcpy(&elmBuf+index, &buf, size);
+				}
 				index+=size;
 			}
 
 		}
 
-		for(int i = 0; i < 10; i++){
+		for(i = 0; i < 10; i++){
 			printf("[%d] - %s\n", i, data[i] );
 		}
 		close(cfd);
