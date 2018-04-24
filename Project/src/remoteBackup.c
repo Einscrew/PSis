@@ -20,6 +20,7 @@
 char clip[10][100];
 
 int setup(){
+
 	int yes, sfd;
 	char pathSocket[108];
 	sprintf(pathSocket, "./%s", BACK_UP_SOCKET);
@@ -27,13 +28,12 @@ int setup(){
 
 	unlink(BACK_UP_SOCKET);
 
-	if((sfd = socket(AF_INET, SOCK_STREAM, 0) ) == -1){
+	if((sfd = socket(AF_INET, SOCK_STREAM, 0)) == -1){
 		printf("Couldn't create socket: %s\n", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
-
 	
-	if(( setsockopt(sfd,SOL_SOCKET,SO_REUSEADDR, &yes, sizeof(int)) ) == -1){
+	if((setsockopt(sfd,SOL_SOCKET,SO_REUSEADDR, &yes, sizeof(int))) == -1){
 		printf("Couldn't set socket: %s\n", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
@@ -48,7 +48,7 @@ int setup(){
 		close(sfd);
 	}
 
-	if (listen(sfd, 0) == -1){
+	if(listen(sfd, 0) == -1){
 		printf("Couldn't listen: %s\n", strerror(errno));
 		exit(EXIT_FAILURE);
 		close(sfd);
@@ -59,15 +59,15 @@ int setup(){
 void handleRequest(Element * elmBuf, char* bufFull, int cfd){
 
 	memmove(elmBuf, bufFull, sizeof(Element));
-	int n=0;
+	int n = 0;
 
 	if(elmBuf->type == 'C'){
 		memcpy(clip[elmBuf->region], elmBuf->content, 100);
-		printf("[%d]-[%s]\n",elmBuf->region, clip[elmBuf->region] );
+		printf("[%d]-[%s]\n",elmBuf->region, clip[elmBuf->region]);
 	}else if(elmBuf->type == 'P'){
 		printf("TODO send region %d , len: %lu\n", elmBuf->region, strlen(clip[elmBuf->region])+1);
 		//n=write(cfd, "oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooop\0", 100);
-		n=write(cfd, clip[elmBuf->region],strlen(clip[elmBuf->region])+1);
+		n = write(cfd, clip[elmBuf->region],strlen(clip[elmBuf->region])+1);
 		printf("Send: %d\n", n);
 	}else{
 		printf("Unknown instruction\n");
@@ -87,7 +87,7 @@ int main(){
 		clip[i][0]='\0';
 	}
 
-	sfd=setup();
+	sfd = setup();
 
 	//accept()
 	while(1){
@@ -96,8 +96,8 @@ int main(){
 			printf("Couldn't accept client connection: %s\n", strerror(errno));
 			exit(EXIT_FAILURE);
 		}
-		index=0;
-		while((size = recv(cfd, &(buf), 10,0)) > 0){
+		index = 0;
+		while((size = recv(cfd, &(buf), 10, 0)) > 0){
 			if(index + size >= sizeof(Element)){
 				printf("size[%d] index[%d]\n", size, index);
 				printf("Saving... index+size=%dVS%lu\n", index+size, sizeof(Element));
@@ -121,7 +121,7 @@ int main(){
 			}else{
 				printf("size[%d] index[%d]\n", size, index);
 				memcpy(bufFull+index, buf, size);
-				index+=size;
+				index += size;
 			}
 
 		}

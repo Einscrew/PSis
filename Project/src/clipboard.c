@@ -19,6 +19,29 @@
 #define TRUE 1
 
 char clip[10][100];
+
+int sendMsg(Element * e, int fd){
+	char * msg = (char*)malloc(sizeof(Element));
+	Element el;
+	el.type='C';
+	el.region =1;
+	memcpy(el.content, "olaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\0", 100);
+
+	memcpy(msg, e, sizeof(Element));
+	int n, count=0;
+
+	while(count < sizeof(Element)){
+		printf("Attempts for sendMsg\n");
+		n = write(fd, msg, sizeof(Element));
+		if(n == -1){
+			printf("%s\n", strerror(errno));
+			return -1;
+		}
+		count += n;
+
+	}
+	return 1;
+}
  
 int syncBack(char * opt){
 	int bfd, n, size, i;
@@ -163,8 +186,7 @@ int main(int argc, char *argv[]){
 	        sync = TRUE;
 	        break;
 	    default: /* '?' */
-	        fprintf(stderr, "Usage: %s [-c ip:port]\n",
-	                argv[0]);
+	        fprintf(stderr, "Usage: %s [-c ip:port]\n", argv[0]);
 	        exit(EXIT_FAILURE);
 	    }
 	}
@@ -182,7 +204,7 @@ int main(int argc, char *argv[]){
 		printf("sizeof(Element):%ld\n", sizeof(Element));
 		index=0;
 		//CHECK IF size buf > size(Element) --------------------------_>>>>>>>>>>>>>>>>>>>>>>>>>>>
-		while((size = recv(cfd, &(buf), 1000,0)) > 0){
+		while((size = recv(cfd, &(buf), 1000, 0)) > 0){
 			//printf("Read:%d\t index:%d\n", size, index);
 					
 			/*
