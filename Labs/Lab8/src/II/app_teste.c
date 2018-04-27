@@ -39,7 +39,7 @@ int main(){
 		clipboard_copy(fd, 1, "dois", 5);
 		sleep(1);
 		
-		clipboard_copy(fd, 1, "ovo", 5);
+		clipboard_copy(fd, 2, "ovo", 5);
 		sleep(1);
 		
 		clipboard_copy(fd, 3, "dois", 5);

@@ -22,6 +22,11 @@
 
 char clip[10][100];
 
+typedef struct argT{
+	int fd;
+	long int * working;
+}argT;
+
 int sendMsg(Element * e, int fd){
 	char * msg = (char*)malloc(sizeof(Element));
 	Element el;
@@ -166,26 +171,23 @@ void handleRequest(Element *elmBuf, char* bufFull, int cfd, int sync, int bfd){
 	}
 }
 
-void *handleConnection(void *childSocket){
+void *handleConnection(void *arg){
 
-	int sock = *(int*)childSocket;
+	argT * a = (argT *)arg;
+	int sock = a->fd;
 
 	int size = 0, index = 0, left2cpy = sizeof(Element);
 	char *bufFull = (char*)malloc(sizeof(Element));
-	char buf[1000] = "";
+	char buf[10] = "";
 
 	int sync = FALSE;
 
 	Element elmBuf;
 
 	//CHECK IF size buf > size(Element) --------------------------_>>>>>>>>>>>>>>>>>>>>>>>>>>>
-	while((size = recv(sock, &(buf), 1000, 0)) > 0){
+	while((size = recv(sock, &(buf), 10, 0)) > 0){
 		//printf("Read:%d\t index:%d\n", size, index);
 				
-		/*
-		 __4___3__4,___
-		|1234|567|8,123|
-		*/	
 		if(index + size >= sizeof(Element)){
 			//printf("size[%d] index[%d]\n", size, index);
 			printf("Saving...\n");
@@ -193,7 +195,7 @@ void *handleConnection(void *childSocket){
 			memcpy(bufFull+index, buf, left2cpy);
 			
 			
-			handleRequest(&elmBuf, bufFull, sock, sync, 0);
+			handleRequest(&elmBuf, bufFull, sock, sync, 0);//REPLACE BFD <...............
 			printf("type: %s ---\n         %c\n         %d\n", elmBuf.content , elmBuf.type, elmBuf.region);
 
 			if(index + size > sizeof(Element)){
@@ -212,9 +214,9 @@ void *handleConnection(void *childSocket){
 	}
 
 	free(bufFull);
-	free(childSocket);
 	close(sock);
-	pthread_exit(NULL);
+	//MUTEX HEEEEEEEEEEEEEEERE
+	*(a->working)= -1;
 
 	return 0;
 }
@@ -224,20 +226,25 @@ int main(int argc, char *argv[]){
 
 	struct sockaddr_un cli_addr;
 	socklen_t cli_addrlen;
+	int n = 4;
 
-	pthread_t mainThread;
-	int *newSock = NULL;
-
-	//FLAGS
-	int sync = FALSE;
+	pthread_t * p = malloc(sizeof(pthread_t) * n);
+	argT * arg = (argT*)malloc(sizeof(argT)*n);
+	long int * working =  (long int*)malloc(sizeof(long int)*n);
 
 	/*int i,sfd, cfd, bfd, size, index=0, left2cpy=sizeof(Element);
 	char * bufFull =(char*) malloc(sizeof(Element));
 	char buf[1000], opt;*/
 
 	char opt;
-	int bfd, i=0, sfd, cfd;
+	int i=0, bfd, sfd, cfd;
 
+	//FLAGS
+	int sync=FALSE;
+
+	for (i =0 ; i < n; i++){
+		working[i] = -1;
+	}
 	for (i = 0; i < 10; ++i)
 		clip[i][0]='\0';
 	
@@ -259,39 +266,34 @@ int main(int argc, char *argv[]){
 	//accept()
 	while(1){
 
-		cfd = accept(sfd, (struct sockaddr *) &cli_addr, &cli_addrlen);
-
-		if(cfd == -1){
-			printf("Couldn't accept client connection: %s\n", strerror(errno));
-			exit(EXIT_FAILURE);
+		for(i = 0; i<2; i++){
+			if(working[i] == -1){
+				cfd = accept(sfd, (struct sockaddr *) &cli_addr, &cli_addrlen);
+				printf("-----------%d accepted\n", i);
+				if(cfd == -1){
+					printf("Couldn't accept client connection: %s\n", strerror(errno));
+					exit(EXIT_FAILURE);
+				}
+				printf("sizeof(Element):%ld\n", sizeof(Element));
+								
+				arg[i].fd = cfd;
+				working[i] = 1;
+				arg[i].working = &working[i];
+				/* Creates a new thread after accepting a new connection */
+				if(pthread_create(&p[i], NULL, handleConnection, (void*)&arg[i]) < 0){
+					printf("Couldn't create new thread: %s\n", strerror(errno));
+					free(arg);
+					close(cfd); 
+					close(sfd);
+					exit(EXIT_FAILURE);
+				}
+				printf("thread create @ %d\n",i );
+			}
 		}
-		printf("sizeof(Element):%ld\n", sizeof(Element));
-
-		newSock = (int*)malloc(sizeof(int));
-		*newSock = cfd;
-
-		/* Creates a new thread after accepting a new connection */
-		if(pthread_create(&mainThread, NULL, handleConnection, (void*)newSock) < 0){
-			printf("Couldn't create new thread: %s\n", strerror(errno));
-			free(newSock);
-			close(cfd); 
-			close(sfd);
-			exit(EXIT_FAILURE);
-		}
-
-		pthread_join(mainThread, NULL);
-
-		printf("-----------------------------------\n");
-		for ( i = 0; i < 10; ++i)
-		{
-			printf("[%d]-[%s]\n",i, clip[i] );
-		}
-
-		//close(cfd);
+		
 	}
-
 	close(sfd);
-	pthread_exit(NULL);
+	//pthread_exit(NULL);
 	exit(0);
 	
 }
