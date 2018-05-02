@@ -1,5 +1,5 @@
 CC=gcc
-FLAGS=-Wall -g
+FLAGS=-Wall -g -lpthread
 ALL=clipboard app remoteBackup
 
 all: $(ALL)

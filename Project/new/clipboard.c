@@ -4,7 +4,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-
 #include <errno.h>
 #include <string.h>
 
@@ -12,6 +11,8 @@
 #include <stdio.h>
 
 #include <unistd.h>
+
+#include <pthread.h>
 
 #include "clipboard.h"
 #include "connection.h"
@@ -26,7 +27,7 @@ typedef struct argT
 {
 	int fd;
 	char * working;
-};
+}argT;
 
  
 int syncBack(char * opt){
@@ -124,7 +125,6 @@ int handleRequest(int size, char* request, int cfd, int sync, int bfd){
 			if(sendMsg(cfd, clip[region], sizes[region]) == -1){
 				return -1;
 			}
-			printf("--awmdiuaw bdoaudb \n");
 			break;
 
 		default:
@@ -135,10 +135,10 @@ int handleRequest(int size, char* request, int cfd, int sync, int bfd){
 
 }
 
-void *thread_attend(void * arg){
+void thread_attend(void * arg){
 	argT *a =(argT*) arg;
 
-	int cfd = arg->fd, n;
+	int cfd = a->fd, n, i;
 
 	char * msg = NULL;
 
@@ -149,7 +149,7 @@ void *thread_attend(void * arg){
 	while ((n = recvMsg(cfd, (void**)&msg)) > 0){
 		printf("\n>>>>>>>>>>>>>>>>>>>>>\n");
 		printf("\n|");
-		for (int i = 0; i < n; ++i)
+		for ( i = 0; i < n; ++i)
 		{
 			printf("%c|", msg[i]);
 		}
@@ -175,9 +175,12 @@ int main(int argc, char *argv[]){
 	//FLAGS
 	int sync = FALSE;
 
-	int i, n,sfd, cfd, bfd;
+	int i, n = 4 ,sfd, cfd, bfd;
 	char opt;
-	char * msg;
+
+	int * working = malloc(sizeof(int)*n);
+	argT * args = malloc(sizeof(argT) * n);
+	pthread_t * threads = malloc(sizeof(pthread_t) * n);
 
 	for (i = 0; i < 10; ++i){
 		clip[i]=NULL;
@@ -202,13 +205,22 @@ int main(int argc, char *argv[]){
 
 	//accept()
 	while(1){
-		cfd = accept(sfd, (struct sockaddr *) &cli_addr, &cli_addrlen);
-		if(cfd == -1){
-			printf("Couldn't accept client connection: %s\n", strerror(errno));
-			exit(EXIT_FAILURE);
+		for (int i = 0; i < n; ++i)
+		{
+			if(working[i] != -1){
+				working[i] = 1;
+				cfd = accept(sfd, (struct sockaddr *) &cli_addr, &cli_addrlen);
+				if(cfd == -1){
+					printf("Couldn't accept client connection: %s\n", strerror(errno));
+					exit(EXIT_FAILURE);
+				}
+				
+				args[i].fd = cfd;
+				args[i].working = &working[i];
+				pthread_create(&threads[i], NULL, (void*)thread_attend, (void*)&args[i]);
+			}
 		}
-		
-		thread_attend();
+		printf("busyXXXXXXX\n");
 	}
 
 	close(sfd);	
