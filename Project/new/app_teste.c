@@ -24,54 +24,19 @@ int main(int argc, char*argv[]){
 			}
 			
 		}*/
-		char dados[10];
-		int count = 10;
+		char c;
+		
 		int fd = clipboard_connect("./");
 
-		int ini = atoi(argv[1]);
-		char c = '0'+ini;
-
-		for (int i = ini; i < ini+1; ++i)
+		
+		while((c=getchar()) != 'q')		
 		{
-			clipboard_copy(fd, i, &c, 1);
-			sleep(4);
-			c++;
+			if(c <= '9' && c >= '0'){
+				printf("sendt\n");
+				clipboard_copy(fd, c-'0', &c, 1);
+			}
 		}
-
-		/*
-		if(fork()==0){
-			fd = clipboard_connect("./");
-		
-			
-			if(fd == -1){
-				exit(-1);
-			}
-
-			clipboard_copy(fd, 0, "uma", 3);
-			sleep(1);
-
-			clipboard_copy(fd, 1, "dois", 4);
-			sleep(1);
-			
-			clipboard_copy(fd, 1, "ovo", 3);
-			sleep(1);
-			
-			clipboard_copy(fd, 3, "dois", 4);
-			sleep(1);
-			
-			clipboard_copy(fd, 4, "cinco", 5);
-			sleep(1);
-			
-			clipboard_paste(fd, 1, (void*)&dados, count);
-			printf("Received from [1] - %s||\n", dados);
-		}else{
-			fd = clipboard_connect("./");
-		
-			
-			if(fd == -1){
-				exit(-1);
-			}
-
+/*
 			clipboard_copy(fd, 6, "uma", 3);
 			sleep(1);
 
@@ -89,7 +54,7 @@ int main(int argc, char*argv[]){
 			
 			clipboard_paste(fd, 1, (void*)&dados, count);
 			printf("Received from [1] - %s||\n", dados);
-		}*/
+		*/
 		
 		close(fd);
 		exit(0);

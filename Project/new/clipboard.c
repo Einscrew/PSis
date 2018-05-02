@@ -178,7 +178,11 @@ int main(int argc, char *argv[]){
 	int i, n = 4 ,sfd, cfd, bfd;
 	char opt;
 
-	int * working = malloc(sizeof(int)*n);
+	char * working = malloc(sizeof(char)*n);
+	for (i = 0; i < n; ++i)
+	{
+		working[i] = -1;
+	}
 	argT * args = malloc(sizeof(argT) * n);
 	pthread_t * threads = malloc(sizeof(pthread_t) * n);
 
@@ -207,7 +211,7 @@ int main(int argc, char *argv[]){
 	while(1){
 		for (int i = 0; i < n; ++i)
 		{
-			if(working[i] != -1){
+			if(working[i] == -1){
 				working[i] = 1;
 				cfd = accept(sfd, (struct sockaddr *) &cli_addr, &cli_addrlen);
 				if(cfd == -1){
@@ -220,7 +224,7 @@ int main(int argc, char *argv[]){
 				pthread_create(&threads[i], NULL, (void*)thread_attend, (void*)&args[i]);
 			}
 		}
-		printf("busyXXXXXXX\n");
+		//printf("busyXXXXXXX\n");
 	}
 
 	close(sfd);	

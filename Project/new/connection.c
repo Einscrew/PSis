@@ -81,19 +81,6 @@ int recvMsg(int from, void ** buf){
 	return read;
 }
 
-int reply(Element * e, int fd){
-	char * msg = (char*)malloc(sizeof(Element));
-	Element el;
-	el.type='C';
-	el.region =1;
-	memcpy(el.content, "olaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\0", 100);
-
-	memcpy(msg, e, sizeof(Element));
-
-	sendMsg(fd, msg, sizeof(Element));
-	
-	return 1;
-}
 
 int createListenerUnix(){
 	int sfd;
