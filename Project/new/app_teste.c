@@ -29,8 +29,9 @@ int main(){
 			}
 			
 		}*/
-		char * dados = NULL;
-
+		char dados[10];
+		int count = 10;
+		
 		clipboard_copy(fd, 0, "uma", 3);
 		// sleep(1);
 
@@ -47,7 +48,7 @@ int main(){
 		// sleep(1);
 
 
-		clipboard_paste(fd, 1, (void*)&dados, sizeof(dados));
+		clipboard_paste(fd, 1, (void*)&dados, count);
 		printf("Received from [1] - %s||\n", dados);
 
 

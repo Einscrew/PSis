@@ -32,6 +32,7 @@ int sendMsg(int to, void * buf, int size){
 		if((n = write(to, buf+written, size-written)) < 0 ){
 			return -1;
 		}
+
 		written += n;
 	}
 	return written;
@@ -49,6 +50,7 @@ int recvMsg(int from, void ** buf){
 	while( miss > 0 ){
 		n = recv(from, &s[read], miss,0);
 		if(n < 0 ) return -1;
+		if(n == 0) return 0;
 		miss -= n;
 		read += n;
 	}

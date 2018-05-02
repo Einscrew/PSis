@@ -70,6 +70,8 @@ int sendMsg(int to, void * buf, int size){
 int recvMsg(int from, void ** buf){
 	int read = 0,  n = 1, miss = sizeof(int), size = 0;
 	char * s = malloc(sizeof(int));
+	if (s == NULL) return -1;
+
 	//get size of read
 	if(buf == NULL){
 		return -1;
@@ -78,6 +80,7 @@ int recvMsg(int from, void ** buf){
 	while( miss > 0 ){
 		n = recv(from, &s[read], miss,0);
 		if(n < 0 ) return -1;
+		if(n == 0) return 0;
 		miss -= n;
 		read += n;
 	}
@@ -85,6 +88,9 @@ int recvMsg(int from, void ** buf){
 	//size should be changed @ this point
 	printf("->%d going to read\n", size );
 	*buf = malloc(size);
+
+	if (*buf == NULL) return -1;
+
 	read = 0;
 	miss = size;
 	

@@ -37,7 +37,8 @@ int clipboard_connect(char * clipboard_dir){
 }
 
 int clipboard_copy(int clipboard_id, int region, void *buf, size_t count){
-	
+	if(region < 0 || region > 9) return -1;
+
 	int finalsize = count+sizeof(char)+sizeof(char);
 	
 	// C|10|olawjmidoanwdanwjabwdjawdawd
@@ -56,22 +57,30 @@ int clipboard_copy(int clipboard_id, int region, void *buf, size_t count){
 
 
 int clipboard_paste(int clipboard_id, int region, void *buf, size_t count){
+	if(region < 0 || region > 9) return -1;
 
 	int finalsize = count+sizeof(char)+sizeof(char);
 	char toSend[2];
-	void * p;
+	void * p = NULL;
+	int r = 0;
 	
-	// P|10|olawjmidoanwdanwjabwdjawdawd
+	// P|10|19
 	toSend[0]='P';
 	toSend[1]=region+'0';
-	sendMsg(clipboard_id, toSend, 2);
+	if(sendMsg(clipboard_id, toSend, 2) == -1)
+		return 0;
 
-	// 28|olawjmidoanwdanwjabwdjawdawd
+	// 28|olawjmidoanwdanwjabwdjawdawd|
+	if((r = recvMsg(clipboard_id, (void**)&p)) == -1){
+		return 0;
+	}
+	printf("\nreceived %d bytes\n",r);
 
-	printf("\nreceived %d bytes\n",recvMsg(clipboard_id, (void**)&p));
+	count = (r<count)?r:count;
 	printf("Received from [1] - %s||\n", p);
-	buf = p;
+	memcpy(buf, p, count);
+	
+	free(p);
 
-
-	return 1;
+	return count;
 }

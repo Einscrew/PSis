@@ -21,6 +21,13 @@
 
 char * clip[10];
 int sizes[10];
+
+typedef struct argT
+{
+	int fd;
+	char * working;
+};
+
  
 int syncBack(char * opt){
 	int bfd, n, size, i;
@@ -88,7 +95,7 @@ int syncBack(char * opt){
 
 
 
-void handleRequest(int size, char* request, int cfd, int sync, int bfd){
+int handleRequest(int size, char* request, int cfd, int sync, int bfd){
 	int region = request[1]-'0';
 	switch(request[0]){
 		case 'C':
@@ -99,6 +106,9 @@ void handleRequest(int size, char* request, int cfd, int sync, int bfd){
 				sizes[region] = 0;
 				free(clip[region]-2);
 			}
+			//  0 1 2 3 4 5 6
+			// -C|2|A|B|C|D|E|\0
+			// /   /
 			clip[region] = &request[2];
 			sizes[region] = size-2;
 
@@ -111,15 +121,51 @@ void handleRequest(int size, char* request, int cfd, int sync, int bfd){
 			break;
 
 		case 'P':
-			sendMsg(cfd, clip[region], sizes[region]);
-			
+			if(sendMsg(cfd, clip[region], sizes[region]) == -1){
+				return -1;
+			}
+			printf("--awmdiuaw bdoaudb \n");
 			break;
 
 		default:
 			printf("Unknown instruction\n");
 			break;
 	}
+	return 0;
 
+}
+
+void *thread_attend(void * arg){
+	argT *a =(argT*) arg;
+
+	int cfd = arg->fd, n;
+
+	char * msg = NULL;
+
+	// Pass as arg;
+	int sync = FALSE;
+	int bfd = 0;
+
+	while ((n = recvMsg(cfd, (void**)&msg)) > 0){
+		printf("\n>>>>>>>>>>>>>>>>>>>>>\n");
+		printf("\n|");
+		for (int i = 0; i < n; ++i)
+		{
+			printf("%c|", msg[i]);
+		}
+		printf("\n");
+		if(handleRequest(n, msg, cfd, sync, bfd) == -1){
+		}
+		
+	}
+	printf("-----------------------------------\n");
+	for ( i = 0; i < 10; ++i)
+	{
+		printf("[%d]-[%s]\n",i, clip[i] );
+	}
+
+	close(cfd);
+	*(a->working) = -1;
 }
 
 int main(int argc, char *argv[]){
@@ -129,12 +175,9 @@ int main(int argc, char *argv[]){
 	//FLAGS
 	int sync = FALSE;
 
-		int i, n,sfd, cfd, bfd, size, index=0, left2cpy=sizeof(Element);
-	char * bufFull =(char*) malloc(sizeof(Element));
-	char buf[1000], opt;
+	int i, n,sfd, cfd, bfd;
+	char opt;
 	char * msg;
-
-	Element elmBuf;
 
 	for (i = 0; i < 10; ++i){
 		clip[i]=NULL;
@@ -164,61 +207,10 @@ int main(int argc, char *argv[]){
 			printf("Couldn't accept client connection: %s\n", strerror(errno));
 			exit(EXIT_FAILURE);
 		}
-
-		index=0;
-		while ((n = recvMsg(cfd, &msg)) > 0){
-			printf("\n>>>>>>>>>>>>>>>>>>>>>\n");
-			printf("\n|");
-			for (int i = 0; i < n; ++i)
-			{
-				printf("%c|", msg[i]);
-			}
-			printf("\n");
-			handleRequest(n, msg, cfd, sync, bfd);
-		}
-		//CHECK IF size buf > size(Element) --------------------------_>>>>>>>>>>>>>>>>>>>>>>>>>>>
-		// while((size = recv(cfd, &(buf), 1000,0)) > 0){
-		// 	//printf("Read:%d\t index:%d\n", size, index);
-
-		// 	/*
-		// 	 __4___3__4,___
-		// 	|1234|567|8,123|
-		// 	*/	
-		// 	if(index + size >= sizeof(Element)){
-		// 		//printf("size[%d] index[%d]\n", size, index);
-		// 		printf("Saving...\n");
-		// 		left2cpy = sizeof(Element) - index;
-		// 		memcpy(bufFull+index, buf, left2cpy);
-				
-				
-		// 		handleRequest(&elmBuf, bufFull, cfd, sync, bfd);
-		// 		printf("type: %s ---\n         %c\n         %d\n", elmBuf.content , elmBuf.type, elmBuf.region);
-
-		// 		if(index + size > sizeof(Element)){
-		// 			index =  size - left2cpy;
-		// 			memcpy(bufFull, buf+(left2cpy), index);						
-		// 		}
-		// 		else{
-		// 			index = 0;
-		// 		}
-
-		// 	}else{
-		// 		memcpy(bufFull+index, buf, size);
-		// 		index+=size;
-		// 	}
-
-		// }
-
-		printf("-----------------------------------\n");
-		for ( i = 0; i < 10; ++i)
-		{
-			printf("[%d]-[%s]\n",i, clip[i] );
-		}
-
-		close(cfd);
+		
+		thread_attend();
 	}
 
-	free(bufFull);
 	close(sfd);	
 	exit(0);
 	
