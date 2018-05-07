@@ -20,8 +20,11 @@
 #define FALSE 0
 #define TRUE 1
 
-char * clip[10];
-int sizes[10];
+typedef struct clip{
+	 char * data;
+	 int size;
+}Clip;
+
 
 typedef struct argT
 {
@@ -29,7 +32,9 @@ typedef struct argT
 	char * working;
 }argT;
 
- 
+static pthread_rwlock_t cliplock[10];
+Clip clip[10];
+
 int syncBack(char * opt){
 	int bfd, n, size, i;
 	struct sockaddr_in my_addr;
@@ -73,7 +78,7 @@ int syncBack(char * opt){
 			memcpy(bufFull+n, buf, size);
 			n +=size;
 			if(buf[size-1] == '\0'){
-				memcpy(clip[i], bufFull, n);
+				memcpy(clip[i].data, bufFull, n);
 				break;
 			}
 		}
@@ -87,7 +92,7 @@ int syncBack(char * opt){
 	}
 	for (i = 0; i < 10; ++i)
 	{
-		printf("[%d]-[%s]\n", i, clip[i]);
+		printf("[%d]-[%s]\n", i, clip[i].data);
 	}
 	free(msg);
 	return bfd;
@@ -97,23 +102,31 @@ int syncBack(char * opt){
 
 
 int handleRequest(int size, char* request, int cfd, int sync, int bfd){
-	int region = request[1]-'0';
+	int region = request[1]-'0', b_size; //LONG INT??
+	char * buf = NULL;
+
 	switch(request[0]){
 		case 'C':
 			//local save
-			
-			if(clip[region] != NULL){
+			//lock region 2 copy as reader
+			pthread_rwlock_wrlock(&cliplock[region]);
+			printf("entering\n");
+			if(clip[region].data != NULL){
 				printf("freeing %d\n", region);
-				sizes[region] = 0;
-				free(clip[region]-2);
+				clip[region].size = 0;
+				free(clip[region].data-2);
 			}
 			//  0 1 2 3 4 5 6
 			// -C|2|A|B|C|D|E|\0
 			// /   /
-			clip[region] = &request[2];
-			sizes[region] = size-2;
+			clip[region].data = &request[2];
+			clip[region].size = size-2;
 
-			printf("[%d]-[%s]\n", region, clip[region] );
+			printf("[%d]-[%s]\n", region, clip[region].data );
+			//unlock region
+			sleep(10);
+			printf("leaving\n");
+			pthread_rwlock_unlock(&cliplock[region]);
 
 			//remote save
 			if(sync){
@@ -122,9 +135,19 @@ int handleRequest(int size, char* request, int cfd, int sync, int bfd){
 			break;
 
 		case 'P':
-			if(sendMsg(cfd, clip[region], sizes[region]) == -1){
+			pthread_rwlock_rdlock(&cliplock[region]);
+			printf("on the write\n");
+			b_size = clip[region].size;
+			buf = malloc(b_size);
+			memcpy(buf, clip[region].data, b_size);
+			sleep(5);
+			printf("leaving write\n");
+			pthread_rwlock_unlock(&cliplock[region]);
+			
+			if(sendMsg(cfd, buf, size) == -1){
 				return -1;
 			}
+			free(buf);
 			break;
 
 		default:
@@ -161,7 +184,7 @@ void thread_attend(void * arg){
 	printf("-----------------------------------\n");
 	for ( i = 0; i < 10; ++i)
 	{
-		printf("[%d]-[%s]\n",i, clip[i] );
+		printf("[%d]-[%s]\n",i, clip[i].data );
 	}
 
 	close(cfd);
@@ -187,8 +210,12 @@ int main(int argc, char *argv[]){
 	pthread_t * threads = malloc(sizeof(pthread_t) * n);
 
 	for (i = 0; i < 10; ++i){
-		clip[i]=NULL;
-		sizes[i]=0;
+		clip[i].data=NULL;
+		clip[i].size=0;
+		if(pthread_rwlock_init(&cliplock[i], NULL) == -1){
+			printf("could create locks\n");
+			exit(EXIT_FAILURE);
+		}
 	}
 	
 	while ((opt = getopt(argc, argv, "c:")) != -1) {

@@ -24,16 +24,35 @@ int main(int argc, char*argv[]){
 			}
 			
 		}*/
-		char c;
-		
+		char c, done;
+		char dados[10];
 		int fd = clipboard_connect("./");
 
 		
 		while((c=getchar()) != 'q')		
 		{
-			if(c <= '9' && c >= '0'){
-				printf("sendt\n");
-				clipboard_copy(fd, c-'0', &c, 1);
+			if(c == 'c'){
+				done = 1;
+				while(done)		
+				{
+					c=getchar();
+					if(c <= '9' && c >= '0'){
+						clipboard_copy(fd, c-'0', &c, 1);
+						printf("sendt\n");
+						done = 0;
+					}
+				}
+			}else if(c == 'p'){
+				done = 1;
+				while(done)		
+				{
+					c=getchar();
+					if(c <= '9' && c >= '0'){
+						clipboard_paste(fd, c-'0', dados, 10);
+						
+						done = 0;
+					}
+				}
 			}
 		}
 /*
