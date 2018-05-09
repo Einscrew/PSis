@@ -9,8 +9,9 @@
 
 #include <unistd.h>
 
-#include "clipboard.h"
 #include "connection.h"
+#include "clipboard.h"
+
 
 int clipboard_connect(char * clipboard_dir){
 	int sfd;
@@ -59,7 +60,6 @@ int clipboard_copy(int clipboard_id, int region, void *buf, size_t count){
 int clipboard_paste(int clipboard_id, int region, void *buf, size_t count){
 	if(region < 0 || region > 9) return -1;
 
-	int finalsize = count+sizeof(char)+sizeof(char);
 	char toSend[2];
 	void * p = NULL;
 	int r = 0;
@@ -77,10 +77,39 @@ int clipboard_paste(int clipboard_id, int region, void *buf, size_t count){
 	printf("\nreceived %d bytes\n",r);
 
 	count = (r<count)?r:count;
-	printf("Received from [1] - %s||\n", p);
+	printf("Received from [%d] - %s||\n",region, p);
 	memcpy(buf, p, count);
 	
 	free(p);
 
-	return count;
+	return r;
+}
+
+
+int clipboard_wait(int clipboard_id, int region, void *buf, size_t count){
+	if(region < 0 || region > 9) return -1;
+
+	char toSend[2];
+	void * p = NULL;
+	int r = 0;
+	
+	// P|10|19
+	toSend[0]='W';
+	toSend[1]=region+'0';
+	if(sendMsg(clipboard_id, toSend, 2) == -1)
+		return 0;
+
+	// 28|olawjmidoanwdanwjabwdjawdawd|
+	if((r = recvMsg(clipboard_id, (void**)&p)) == -1){
+		return 0;
+	}
+	printf("\nreceived %d bytes\n",r);
+
+	count = (r<count)?r:count;
+	printf("Received from [%d] - %s||\n",region, p);
+	memcpy(buf, p, count);
+	
+	free(p);
+
+	return r;
 }

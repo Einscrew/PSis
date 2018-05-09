@@ -13,93 +13,38 @@
 #include <unistd.h>
 
 #include <pthread.h>
-
-#include "clipboard.h"
 #include "connection.h"
 
 #define FALSE 0
 #define TRUE 1
+
+
+typedef struct argT{
+	int fd;
+	char * working;
+}argT;
 
 typedef struct clip{
 	 char * data;
 	 int size;
 }Clip;
 
-
-typedef struct argT
-{
-	int fd;
-	char * working;
-}argT;
-
-static pthread_rwlock_t cliplock[10];
+pthread_rwlock_t cliplock[10];
+pthread_mutex_t waitlock[10];
+pthread_cond_t w [10] = {PTHREAD_COND_INITIALIZER};
 Clip clip[10];
 
-int syncBack(char * opt){
-	int bfd, n, size, i;
-	struct sockaddr_in my_addr;
-	char buf[10] = "", bufFull[100];
-	Element e;
-
-	if((bfd = socket(AF_INET, SOCK_STREAM, 0) ) == -1){
-		printf("Couldn't create socket: %s\n", strerror(errno));
-		exit(EXIT_FAILURE);
-	}
+int waitRegion(int region, char ** content){
+	int size;
+	pthread_mutex_lock(&waitlock[region]);
 	
-	memset(&my_addr, 0, sizeof(struct sockaddr_in));
-	my_addr.sin_family = AF_INET;
-	my_addr.sin_port = htons(10101);
-	inet_aton("127.0.0.1", &my_addr.sin_addr);
-	
-
-	if(connect(bfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr_in))== -1){
-		printf("Couldn't open socket: %s\n", strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-	
-	//Syncronization
-	char * msg = (char*)malloc(sizeof(Element));
-	
-	for (i = 0; i < 10; ++i)
-	{
-		e.type = 'P';
-		e.region = i;
-
-		//memcpy(e.content, "oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooop\0", 100);
-
-		memcpy(msg, &e, sizeof(Element));
-		n = write(bfd, msg, sizeof(Element));
-		//printf("Writing [%d]-%d\n",i, n);
-
-		n = 0;
-		while((size = read(bfd, buf, 10)) > 0){
-			///printf("read:#%d-[%s]\n",size , buf);
-
-			memcpy(bufFull+n, buf, size);
-			n +=size;
-			if(buf[size-1] == '\0'){
-				memcpy(clip[i].data, bufFull, n);
-				break;
-			}
-		}
-		if(size == -1){
-			printf("Could not complete sync\n");
-			exit(EXIT_FAILURE);
-		}
-
-		//printf("[%d]-[%s]\n", i, bufFull);
-		
-	}
-	for (i = 0; i < 10; ++i)
-	{
-		printf("[%d]-[%s]\n", i, clip[i].data);
-	}
-	free(msg);
-	return bfd;
-
+	pthread_cond_wait(&w[region], &waitlock[region]);
+	size = clip[region].size;
+	*content = malloc(size);
+	memcpy(*content, clip[region].data, size);
+	pthread_mutex_unlock(&waitlock[region]);
+	return size;
 }
-
-
 
 int handleRequest(int size, char* request, int cfd, int sync, int bfd){
 	int region = request[1]-'0', b_size; //LONG INT??
@@ -110,6 +55,8 @@ int handleRequest(int size, char* request, int cfd, int sync, int bfd){
 			//local save
 			//lock region 2 copy as reader
 			pthread_rwlock_wrlock(&cliplock[region]);
+			pthread_mutex_lock(&waitlock[region]);
+
 			printf("entering\n");
 			if(clip[region].data != NULL){
 				printf("freeing %d\n", region);
@@ -126,6 +73,9 @@ int handleRequest(int size, char* request, int cfd, int sync, int bfd){
 			//unlock region
 			sleep(10);
 			printf("leaving\n");
+			pthread_cond_broadcast(&w[region]);
+
+			pthread_mutex_unlock(&waitlock[region]);
 			pthread_rwlock_unlock(&cliplock[region]);
 
 			//remote save
@@ -148,6 +98,15 @@ int handleRequest(int size, char* request, int cfd, int sync, int bfd){
 				return -1;
 			}
 			free(buf);
+			break;
+
+		case 'W':
+			printf("WWWWWWWW received\n");
+			buf = malloc(2);
+			buf[0]='!';
+			buf[1]='\0';
+			sendMsg(cfd, buf, 2);
+			//waitRegion();
 			break;
 
 		default:
@@ -221,7 +180,7 @@ int main(int argc, char *argv[]){
 	while ((opt = getopt(argc, argv, "c:")) != -1) {
 	    switch (opt) {
 	    case 'c':
-	        bfd = syncBack(optarg);
+	       // bfd = syncBack(optarg);
 	        sync = TRUE;
 	        break;
 	    default: /* '?' */

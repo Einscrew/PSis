@@ -1,4 +1,8 @@
+#ifndef CLIP
+#define CLIP
 
-int sendMsg(int to, void * buf, int size);
+int glo = 1;
 
-int recvMsg(int from, void ** buf);
+void waitclip();
+
+#endif

@@ -53,6 +53,17 @@ int main(int argc, char*argv[]){
 						done = 0;
 					}
 				}
+			}else if(c == 'w'){
+				done = 1;
+				while(done)		
+				{
+					c=getchar();
+					if(c <= '9' && c >= '0'){
+						clipboard_wait(fd, c-'0', dados, 10);
+						
+						done = 0;
+					}
+				}
 			}
 		}
 /*
