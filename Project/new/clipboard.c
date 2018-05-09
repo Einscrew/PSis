@@ -54,8 +54,8 @@ int handleRequest(int size, char* request, int cfd, int sync, int bfd){
 		case 'C':
 			//local save
 			//lock region 2 copy as reader
-			pthread_rwlock_wrlock(&cliplock[region]);
 			pthread_mutex_lock(&waitlock[region]);
+			pthread_rwlock_wrlock(&cliplock[region]);
 
 			printf("entering\n");
 			if(clip[region].data != NULL){
@@ -71,7 +71,7 @@ int handleRequest(int size, char* request, int cfd, int sync, int bfd){
 
 			printf("[%d]-[%s]\n", region, clip[region].data );
 			//unlock region
-			sleep(10);
+			sleep(5);
 			printf("leaving\n");
 			pthread_cond_broadcast(&w[region]);
 
@@ -101,12 +101,11 @@ int handleRequest(int size, char* request, int cfd, int sync, int bfd){
 			break;
 
 		case 'W':
-			printf("WWWWWWWW received\n");
-			buf = malloc(2);
-			buf[0]='!';
-			buf[1]='\0';
-			sendMsg(cfd, buf, 2);
-			//waitRegion();
+			b_size = waitRegion(region, &buf);
+			if(sendMsg(cfd, buf, b_size) == -1){
+				return -1;
+			}
+			free(buf);
 			break;
 
 		default:
