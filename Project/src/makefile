@@ -1,20 +1,30 @@
 CC=gcc
-FLAGS=-Wall -g
-ALL=clipboard app remoteBackup
+FLAGS=-lpthread
+EXTRA=-Wall -g
+APP=app
+CLIP=clipboard
+ALL=$(CLIP) $(APP)
+
 
 all: $(ALL)
 
-remoteBackup: remoteBackup.c library.o
+#############################################################
+#						 Objects                            #
+#############################################################
+clipboard: clipboard.c connection.o library.o
+	$(CC) $^ -o $@ $(FLAGS) $(EXTRA)
+		
+app: app_teste.c connection.o library.o
 	$(CC) $^ -o $@ $(FLAGS) $(EXTRA)
 
-clipboard: clipboard.c library.o
-	$(CC) $^ -o $@ $(FLAGS) $(EXTRA)
+#############################################################
+#						Libraries                           #
+#############################################################
+connection.o: connection.c connection.h
+	$(CC) -c $^ $(FLAGS) $(EXTRA)
 
-app: app_teste.c library.o
-	$(CC) $^ -o $@ $(FLAGS) $(EXTRA)
-
-library.o: library.c
+library.o: library.c clipboard.h connection.h
 	$(CC) -c $^ $(FLAGS) $(EXTRA)
 
 clean:
-	rm -f *.*o $(ALL)
+	rm -f *.*o *.gch $(ALL)

@@ -1,5 +1,3 @@
-#include "clipboard.h"
-#include <sys/types.h>
 #include <sys/un.h>
 #include <sys/socket.h>
 
@@ -11,6 +9,10 @@
 
 #include <unistd.h>
 
+#include "connection.h"
+#include "clipboard.h"
+
+
 int clipboard_connect(char * clipboard_dir){
 	int sfd;
 	struct sockaddr_un my_addr;
@@ -18,8 +20,8 @@ int clipboard_connect(char * clipboard_dir){
 	sprintf(pathSocket, "./%s", CLIPBOARD_SOCKET);
 
 	if((sfd = socket(AF_UNIX, SOCK_STREAM, 0) ) == -1){
-		printf("Couldn't open socket: %s\n", strerror(errno));
-		exit(EXIT_FAILURE);
+		printf("Local clipboard couldn't be accessed: [%s]\n", strerror(errno));
+		return -1;
 	}
 
 
@@ -36,40 +38,81 @@ int clipboard_connect(char * clipboard_dir){
 }
 
 int clipboard_copy(int clipboard_id, int region, void *buf, size_t count){
+	if(region < 0 || region > 9) return 0;
+
+	long int finalsize = count+sizeof(char)+sizeof(char);
 	
-	Element e;
-	e.type = 'C';
-	e.region = region;
-	memcpy(e.content, buf, count);
+	// C|10|olawjmidoanwdanwjabwdjawdawd
+	char *msg = (char*)malloc(finalsize);
 
-	char *msg = (char*)malloc(sizeof(Element));
-	memcpy(msg, &e, sizeof(Element));
-	printf("write:%ld\n", sizeof(Element));
-	write(clipboard_id, msg, sizeof(Element));
+	msg[0]='C';
+	msg[1]=region+'0';
+	memcpy(msg+2, buf, count);
+	
+	printf("write:%ld\n", finalsize);
 
-	free(msg);
-
-	return 0;
+	int r = sendMsg(clipboard_id, msg, finalsize);
+	return (r == -1)?(0):(r);
 }
 
 
 int clipboard_paste(int clipboard_id, int region, void *buf, size_t count){
+	if(region < 0 || region > 9) return 0;
+
+	char toSend[2];
+	void * p = NULL;
+	int r = 0;
 	
-	Element e;
-	e.type = 'P';
-	e.region = region;
-	e.content[0] = '\0';
+	// P|10|19
+	toSend[0]='P';
+	toSend[1]=region+'0';
+	if(sendMsg(clipboard_id, toSend, 2) == -1)
+		return 0;
 
-	char * msg = (char*)malloc(sizeof(Element));
-	memcpy(msg, &e, sizeof(Element));
+	// 28|olawjmidoanwdanwjabwdjawdawd|
+	if((r = recvMsg(clipboard_id, (void**)&p)) == -1){
+		return 0;
+	}
+	printf("\nreceived %d bytes\n",r);
 
-	write(clipboard_id, msg, sizeof(Element));
+	count = (r<count)?r:count; // TO CHANGE
+	printf("Received from [%d] - %s||\n",region, (char*)p);
+	memcpy(buf, p, count);
+	
+	free(p);
 
-	read(clipboard_id, buf, count);
-
-	free(msg);
-
-	return 1;
+	return r;
 }
 
 
+int clipboard_wait(int clipboard_id, int region, void *buf, size_t count){
+	if(region < 0 || region > 9) return -1;
+
+	char toSend[2];
+	void * p = NULL;
+	int r = 0;
+	
+	// P|10|19
+	toSend[0]='W';
+	toSend[1]=region+'0';
+	if(sendMsg(clipboard_id, toSend, 2) == -1)
+		return 0;
+
+	// 28|olawjmidoanwdanwjabwdjawdawd|
+	if((r = recvMsg(clipboard_id, (void**)&p)) == -1){
+		return 0;
+	}
+	printf("\nreceived %d bytes\n",r);
+
+	count = (r<count)?r:count;
+	printf("Received from [%d] - %s||\n",region, (char*)p);
+	memcpy(buf, p, count);
+	
+	free(p);
+
+	return r;
+}
+
+void clipboard_close(int clipboard_id){
+	close(clipboard_id);
+}

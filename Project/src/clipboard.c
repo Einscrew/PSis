@@ -4,7 +4,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-
 #include <errno.h>
 #include <string.h>
 
@@ -13,154 +12,159 @@
 
 #include <unistd.h>
 
-#include "clipboard.h"
+#include <pthread.h>
+#include "connection.h"
 
 #define FALSE 0
 #define TRUE 1
 
-char clip[10][100];
 
-int sendMsg(Element * e, int fd){
-	char * msg = (char*)malloc(sizeof(Element));
-	Element el;
-	el.type='C';
-	el.region =1;
-	memcpy(el.content, "olaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\0", 100);
+typedef struct argT{
+	int fd;
+	char * working;
+}argT;
 
-	memcpy(msg, e, sizeof(Element));
-	int n, count=0;
+typedef struct clip{
+	 char * data;
+	 int size;
+}Clip;
 
-	while(count < sizeof(Element)){
-		printf("Attempts for sendMsg\n");
-		n = write(fd, msg, sizeof(Element));
-		if(n == -1){
-			printf("%s\n", strerror(errno));
-			return -1;
-		}
-		count += n;
+pthread_rwlock_t cliplock[10];
+pthread_mutex_t waitlock[10];
+pthread_cond_t w [10] = {PTHREAD_COND_INITIALIZER};
+Clip clip[10];
 
-	}
-	return 1;
+int waitRegion(int region, char ** content){
+	int size;
+	pthread_mutex_lock(&waitlock[region]);
+	
+	pthread_cond_wait(&w[region], &waitlock[region]);
+	size = clip[region].size;
+	*content = malloc(size);
+	memcpy(*content, clip[region].data, size);
+	pthread_mutex_unlock(&waitlock[region]);
+	return size;
 }
- 
-int syncBack(char * opt){
-	int bfd, n, size, i;
-	struct sockaddr_in my_addr;
-	char buf[10] = "", bufFull[100];
-	Element e;
 
-	if((bfd = socket(AF_INET, SOCK_STREAM, 0) ) == -1){
-		printf("Couldn't create socket: %s\n", strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-	
-	memset(&my_addr, 0, sizeof(struct sockaddr_in));
-	my_addr.sin_family = AF_INET;
-	my_addr.sin_port = htons(10101);
-	inet_aton("127.0.0.1", &my_addr.sin_addr);
-	
+int handleRequest(int size, char* request, int cfd, int sync, int bfd){
+	int region = request[1]-'0', b_size; //LONG INT??
+	char * buf = NULL;
 
-	if(connect(bfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr_in))== -1){
-		printf("Couldn't open socket: %s\n", strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-	
-	//Syncronization
-	char * msg = (char*)malloc(sizeof(Element));
-	
-	for (i = 0; i < 10; ++i)
-	{
-		e.type = 'P';
-		e.region = i;
+	switch(request[0]){
+		case 'C':
+			//local save
+			//lock region 2 copy as reader
+			pthread_mutex_lock(&waitlock[region]);
+			pthread_rwlock_wrlock(&cliplock[region]);
 
-		//memcpy(e.content, "oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooop\0", 100);
-
-		memcpy(msg, &e, sizeof(Element));
-		n = write(bfd, msg, sizeof(Element));
-		//printf("Writing [%d]-%d\n",i, n);
-
-		n = 0;
-		while((size = read(bfd, buf, 10)) > 0){
-			///printf("read:#%d-[%s]\n",size , buf);
-
-			memcpy(bufFull+n, buf, size);
-			n +=size;
-			if(buf[size-1] == '\0'){
-				memcpy(clip[i], bufFull, n);
-				break;
+			printf("entering\n");
+			if(clip[region].data != NULL){
+				printf("freeing %d\n", region);
+				clip[region].size = 0;
+				free(clip[region].data-2);
 			}
-		}
-		if(size == -1){
-			printf("Could not complete sync\n");
-			exit(EXIT_FAILURE);
-		}
+			//  0 1 2 3 4 5 6
+			// -C|2|A|B|C|D|E|\0
+			// /   /
+			clip[region].data = &request[2];
+			clip[region].size = size-2;
 
-		//printf("[%d]-[%s]\n", i, bufFull);
+			printf("[%d]-[", region);
+			fflush(stdout);
+			write(1, clip[region].data, clip[region].size);
+			printf("]-%d\n", clip[region].size );
+			fflush(stdout);
+			//unlock region
+			sleep(5);
+			printf("leaving\n");
+			pthread_cond_broadcast(&w[region]);
+
+			pthread_mutex_unlock(&waitlock[region]);
+			pthread_rwlock_unlock(&cliplock[region]);
+
+			//remote save
+			if(sync){
+				//reply(elmBuf, bfd);
+			}
+			break;
+
+		case 'P':
+			pthread_rwlock_rdlock(&cliplock[region]);
+			printf("on the write\n");
+			b_size = clip[region].size;
+			buf = malloc(b_size);
+			memcpy(buf, clip[region].data, b_size);
+			sleep(5);
+			printf("leaving write\n");
+			pthread_rwlock_unlock(&cliplock[region]);
+			
+			if(sendMsg(cfd, buf, size) == -1){
+				close(cfd);
+				return -1;
+			}
+			free(buf);
+			break;
+
+		case 'W':
+			b_size = waitRegion(region, &buf);
+			if(sendMsg(cfd, buf, b_size) == -1){
+				close(cfd);
+				return -1;
+			}
+			free(buf);
+			break;
+
+		default:
+			printf("Unknown instruction\n");
+			break;
+	}
+	return 0;
+
+}
+
+void thread_attend(void * arg){
+	argT *a =(argT*) arg;
+
+	int cfd = a->fd, n, i;
+
+	char * msg = NULL;
+
+	// Pass as arg;
+	int sync = FALSE;
+	int bfd = 0;
+
+	while ((n = recvMsg(cfd, (void**)&msg)) > 0){
+		printf("\n>>>>>>>>>>>>>>>>>>>>>\n");
+		printf("\n|");
+		for ( i = 0; i < n; i++)
+		{
+			printf("%c|", msg[i]);
+		}
+		printf("\n");
+
+		if( n >= 3 && (msg[0] == 'C' || msg[0] == 'P' || msg[0] == 'W') && msg[1] <= '9' && msg[1] >= '0'){
+			if( handleRequest(n, msg, cfd, sync, bfd) == -1 ){
+				//TODO
+			}
+		}else{
+			printf("USSJSJS\n");
+			free(msg);
+			break;
+		}
 		
 	}
-	for (i = 0; i < 10; ++i)
+	printf("-----------------------------------\n");
+	for ( i = 0; i < 10; ++i)
 	{
-		printf("[%d]-[%s]\n", i, clip[i]);
-	}
-	free(msg);
-	return bfd;
-
-}
-
-int createListener(){
-	int sfd;
-	char pathSocket[108];
-	sprintf(pathSocket, "./%s", CLIPBOARD_SOCKET);
-	struct sockaddr_un my_addr;
-
-	unlink(CLIPBOARD_SOCKET);
-
-	if((sfd = socket(AF_UNIX, SOCK_STREAM, 0) ) == -1){
-		printf("Couldn't open socket: %s\n", strerror(errno));
-		exit(EXIT_FAILURE);
+		printf("[%d]-[", i);
+		fflush(stdout);
+		write(1, clip[i].data, clip[i].size);
+		printf("]-%d\n", clip[i].size );
+		fflush(stdout);
 	}
 
-	memset(&my_addr, 0, sizeof(struct sockaddr_un));
-	my_addr.sun_family = AF_UNIX;
-	strncpy(my_addr.sun_path, pathSocket, sizeof(my_addr.sun_path)-1);
-
-	if(bind(sfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr_un)) == -1){
-		printf("Couldn't bind socket: %s\n", strerror(errno));
-		exit(EXIT_FAILURE);
-		close(sfd);
-	}
-
-	if (listen(sfd, 0) == -1){
-		printf("Couldn't listen: %s\n", strerror(errno));
-		exit(EXIT_FAILURE);
-		close(sfd);
-	}
-	return sfd;
-}
-
-
-void handleRequest(Element * elmBuf, char* bufFull, int cfd, int sync, int bfd){
-
-	memmove(elmBuf, bufFull, sizeof(Element));
-	int n=0;
-
-	if(elmBuf->type == 'C'){
-		//local save
-		memcpy(clip[elmBuf->region], elmBuf->content, 100);
-		printf("[%d]-[%s]\n", elmBuf->region, clip[elmBuf->region] );
-
-		//remote save
-		if(sync){
-			sendMsg(elmBuf, bfd);
-		}
-
-	}else if(elmBuf->type == 'P'){
-		printf("TODO send region:\n");
-		n=write(cfd, clip[elmBuf->region] ,strlen(clip[elmBuf->region]));
-		printf("Send: %d\n", n);
-	}else{
-		printf("Unknown instruction\n");
-	}
+	close(cfd);
+	*(a->working) = -1;
 }
 
 int main(int argc, char *argv[]){
@@ -170,82 +174,62 @@ int main(int argc, char *argv[]){
 	//FLAGS
 	int sync = FALSE;
 
-	int i,sfd, cfd, bfd, size, index=0, left2cpy=sizeof(Element);
-	char * bufFull =(char*) malloc(sizeof(Element));
-	char buf[1000], opt;
+	int i, n = 4 ,sfd, cfd, bfd;
+	char opt;
 
-	Element elmBuf;
+	char * working = malloc(sizeof(char)*n);
+	for (i = 0; i < n; ++i)
+	{
+		working[i] = -1;
+	}
+	argT * args = malloc(sizeof(argT) * n);
+	pthread_t * threads = malloc(sizeof(pthread_t) * n);
 
-	for (i = 0; i < 10; ++i)
-		clip[i][0]='\0';
+	for (i = 0; i < 10; ++i){
+		clip[i].data=NULL;
+		clip[i].size=0;
+		if(pthread_rwlock_init(&cliplock[i], NULL) == -1){
+			printf("could create locks\n");
+			exit(EXIT_FAILURE);
+		}
+	}
 	
 	while ((opt = getopt(argc, argv, "c:")) != -1) {
 	    switch (opt) {
 	    case 'c':
-	        bfd = syncBack(optarg);
+	       // bfd = syncBack(optarg);
 	        sync = TRUE;
 	        break;
 	    default: /* '?' */
-	        fprintf(stderr, "Usage: %s [-c ip:port]\n", argv[0]);
+	        fprintf(stderr, "Usage: %s [-c ip:port]\n",
+	                argv[0]);
 	        exit(EXIT_FAILURE);
 	    }
 	}
 
 	
-	sfd = createListener();
+	sfd = createListenerUnix();
 
 	//accept()
 	while(1){
-		cfd = accept(sfd, (struct sockaddr *) &cli_addr, &cli_addrlen);
-		if(cfd == -1){
-			printf("Couldn't accept client connection: %s\n", strerror(errno));
-			exit(EXIT_FAILURE);
-		}
-		printf("sizeof(Element):%ld\n", sizeof(Element));
-		index=0;
-		//CHECK IF size buf > size(Element) --------------------------_>>>>>>>>>>>>>>>>>>>>>>>>>>>
-		while((size = recv(cfd, &(buf), 1000, 0)) > 0){
-			//printf("Read:%d\t index:%d\n", size, index);
-					
-			/*
-			 __4___3__4,___
-			|1234|567|8,123|
-			*/	
-			if(index + size >= sizeof(Element)){
-				//printf("size[%d] index[%d]\n", size, index);
-				printf("Saving...\n");
-				left2cpy = sizeof(Element) - index;
-				memcpy(bufFull+index, buf, left2cpy);
-				
-				
-				handleRequest(&elmBuf, bufFull, cfd, sync, bfd);
-				printf("type: %s ---\n         %c\n         %d\n", elmBuf.content , elmBuf.type, elmBuf.region);
-
-				if(index + size > sizeof(Element)){
-					index =  size - left2cpy;
-					memcpy(bufFull, buf+(left2cpy), index);						
-				}
-				else{
-					index = 0;
-				}
-
-			}else{
-				memcpy(bufFull+index, buf, size);
-				index+=size;
-			}
-
-		}
-
-		printf("-----------------------------------\n");
-		for ( i = 0; i < 10; ++i)
+		for (int i = 0; i < n; ++i)
 		{
-			printf("[%d]-[%s]\n",i, clip[i] );
+			if(working[i] == -1){
+				working[i] = 1;
+				cfd = accept(sfd, (struct sockaddr *) &cli_addr, &cli_addrlen);
+				if(cfd == -1){
+					printf("Couldn't accept client connection: %s\n", strerror(errno));
+					exit(EXIT_FAILURE);
+				}
+				
+				args[i].fd = cfd;
+				args[i].working = &working[i];
+				pthread_create(&threads[i], NULL, (void*)thread_attend, (void*)&args[i]);
+			}
 		}
-
-		close(cfd);
+		//printf("busyXXXXXXX\n");
 	}
 
-	free(bufFull);
 	close(sfd);	
 	exit(0);
 	

@@ -4,17 +4,10 @@
 #include <stdio.h>
 #include <unistd.h>
 
-int main(){
+int main(int argc, char*argv[]){
 
-		int fd = clipboard_connect("./");
 		
 		
-		if(fd == -1){
-			exit(-1);
-		}
-		
-		char dados[10] = "";
-		int dados_int;
 		/*while(1){
 			switch fgetc(){
 				case 'P':
@@ -31,26 +24,79 @@ int main(){
 			}
 			
 		}*/
-		
+		char c, done;
+		char dados[10];
+		int fd = clipboard_connect("./");
 
-		clipboard_copy(fd, 0, "uma", 4);
-		sleep(1);
-
-		clipboard_copy(fd, 1, "dois", 5);
-		sleep(1);
 		
-		clipboard_copy(fd, 1, "ovo", 5);
-		sleep(1);
+		while((c=getchar()) != 'q')		
+		{
+			if(c == 'c'){
+				done = 1;
+				while(done)		
+				{
+					c=getchar();
+					if(c <= '9' && c >= '0'){
+						clipboard_copy(fd, c-'0', &c, 1);
+						printf("sendt\n");
+						done = 0;
+					}
+				}
+			}else if(c == 'p'){
+				done = 1;
+				while(done)		
+				{
+					c=getchar();
+					if(c <= '9' && c >= '0'){
+						clipboard_paste(fd, c-'0', dados, 10);
+						
+						done = 0;
+					}
+				}
+			}else if(c == 'w'){
+				done = 1;
+				while(done)		
+				{
+					c=getchar();
+					if(c <= '9' && c >= '0'){
+						clipboard_wait(fd, c-'0', dados, 10);
+						
+						done = 0;
+					}
+				}
+			}else if(c == 'e'){
+				c=getchar();
+				
+					clipboard_copy(fd, -2, &c, 1);
+					printf("sendt\n");
+					done = 0;
+				
+			}
+		}
+/*
+			clipboard_copy(fd, 6, "uma", 3);
+			sleep(1);
+
+			clipboard_copy(fd, 7, "dois", 4);
+			sleep(1);
+			
+			clipboard_copy(fd, 8, "ovo", 3);
+			sleep(1);
+			
+			clipboard_copy(fd, 9, "dois", 4);
+			sleep(1);
+			
+			clipboard_copy(fd, 5, "cinco", 5);
+			sleep(1);
+			
+			clipboard_paste(fd, 1, (void*)&dados, count);
+			printf("Received from [1] - %s||\n", dados);
+		*/
 		
-		clipboard_copy(fd, 3, "dois", 5);
-		sleep(1);
-		
-		clipboard_copy(fd, 4, "cinco", 6);
-		sleep(1);
+		close(fd);
+		exit(0);
 
 
-		clipboard_paste(fd, 1, dados, sizeof(dados));
-		printf("Received from [1] - %s||\n", dados);
 
 
 
@@ -59,6 +105,4 @@ int main(){
 		//read(fd+1, &dados_int, sizeof(dados_int));
 		//printf("Received %d\n", dados_int);
 		
-		close(fd);
-		exit(0);
 	}
