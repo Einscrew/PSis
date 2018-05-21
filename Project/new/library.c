@@ -20,8 +20,8 @@ int clipboard_connect(char * clipboard_dir){
 	sprintf(pathSocket, "./%s", CLIPBOARD_SOCKET);
 
 	if((sfd = socket(AF_UNIX, SOCK_STREAM, 0) ) == -1){
-		printf("Couldn't open socket: %s\n", strerror(errno));
-		exit(EXIT_FAILURE);
+		printf("Local clipboard couldn't be accessed: [%s]\n", strerror(errno));
+		return -1;
 	}
 
 
@@ -38,9 +38,9 @@ int clipboard_connect(char * clipboard_dir){
 }
 
 int clipboard_copy(int clipboard_id, int region, void *buf, size_t count){
-	if(region < 0 || region > 9) return -1;
+	if(region < 0 || region > 9) return 0;
 
-	int finalsize = count+sizeof(char)+sizeof(char);
+	long int finalsize = count+sizeof(char)+sizeof(char);
 	
 	// C|10|olawjmidoanwdanwjabwdjawdawd
 	char *msg = (char*)malloc(finalsize);
@@ -51,14 +51,13 @@ int clipboard_copy(int clipboard_id, int region, void *buf, size_t count){
 	
 	printf("write:%ld\n", finalsize);
 
-	sendMsg(clipboard_id, msg, finalsize);
-
-	return 0;
+	int r = sendMsg(clipboard_id, msg, finalsize);
+	return (r == -1)?(0):(r);
 }
 
 
 int clipboard_paste(int clipboard_id, int region, void *buf, size_t count){
-	if(region < 0 || region > 9) return -1;
+	if(region < 0 || region > 9) return 0;
 
 	char toSend[2];
 	void * p = NULL;
@@ -76,8 +75,8 @@ int clipboard_paste(int clipboard_id, int region, void *buf, size_t count){
 	}
 	printf("\nreceived %d bytes\n",r);
 
-	count = (r<count)?r:count;
-	printf("Received from [%d] - %s||\n",region, p);
+	count = (r<count)?r:count; // TO CHANGE
+	printf("Received from [%d] - %s||\n",region, (char*)p);
 	memcpy(buf, p, count);
 	
 	free(p);
@@ -106,10 +105,14 @@ int clipboard_wait(int clipboard_id, int region, void *buf, size_t count){
 	printf("\nreceived %d bytes\n",r);
 
 	count = (r<count)?r:count;
-	printf("Received from [%d] - %s||\n",region, p);
+	printf("Received from [%d] - %s||\n",region, (char*)p);
 	memcpy(buf, p, count);
 	
 	free(p);
 
 	return r;
+}
+
+void clipboard_close(int clipboard_id){
+	close(clipboard_id);
 }

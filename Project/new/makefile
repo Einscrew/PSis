@@ -1,23 +1,25 @@
 CC=gcc
-FLAGS=-Wall -g -lpthread
-ALL=clipboard app 
-#remoteBackup
+FLAGS=-lpthread
+EXTRA=-Wall -g
+APP=app
+CLIP=clipboard
+ALL=$(CLIP) $(APP)
+
 
 all: $(ALL)
 
-# Runnable
-
-#remoteBackup: remoteBackup.c connection.o library.o
-#	$(CC) $^ -o $@ $(FLAGS) $(EXTRA)
-
+#############################################################
+#						 Objects                            #
+#############################################################
 clipboard: clipboard.c connection.o library.o
 	$(CC) $^ -o $@ $(FLAGS) $(EXTRA)
 		
-app: app_teste.c connection.c library.o
+app: app_teste.c connection.o library.o
 	$(CC) $^ -o $@ $(FLAGS) $(EXTRA)
 
-# Libraries
-
+#############################################################
+#						Libraries                           #
+#############################################################
 connection.o: connection.c connection.h
 	$(CC) -c $^ $(FLAGS) $(EXTRA)
 
@@ -26,3 +28,5 @@ library.o: library.c clipboard.h connection.h
 
 clean:
 	rm -f *.*o *.gch $(ALL)
+
+#echo -e '\x0\x1\x0\x0\x432e8o2uhd aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaawydgawdawdawdawdawdawdawjiiiiiiiiiiiiiiiiiiiiiiiiis\x4\x0\x0\x0\x43231' | nc -U /home/einstein/IST/MSc/PSis/repo/Project/new/clipSocket

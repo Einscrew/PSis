@@ -64,6 +64,13 @@ int main(int argc, char*argv[]){
 						done = 0;
 					}
 				}
+			}else if(c == 'e'){
+				c=getchar();
+				
+					clipboard_copy(fd, -2, &c, 1);
+					printf("sendt\n");
+					done = 0;
+				
 			}
 		}
 /*

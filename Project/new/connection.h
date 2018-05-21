@@ -7,4 +7,8 @@ int recvMsg(int from, void ** buf);
 
 int createListenerUnix();
 
+int setupParentListener();
+
+int createListenerInet(char * opt);
+
 #endif

@@ -12,6 +12,8 @@
 
 #include <unistd.h>
 
+#include <limits.h>
+
 #include "clipboard.h"
 #include "connection.h"
 
@@ -48,35 +50,45 @@ int recvMsg(int from, void ** buf){
 	
 	while( miss > 0 ){
 		n = recv(from, &s[read], miss,0);
-		if(n < 0 ) return -1;
-		if(n == 0) return 0;
+		if(n < 0 ){ free(s);return -1;}
+		if(n == 0){ free(s);return 0;}
 		miss -= n;
 		read += n;
 	}
+
 	memcpy(&size, s, sizeof(int));
 	//size should be changed @ this point
 	printf("->%d going to read\n", size );
-	*buf = malloc(size);
-	read = 0;
-	miss = size;
-	
-	while (read < size){
-		if((n=recv(from, *buf+read, miss,0)) < 0){
-			printf("Error receiving\n");
-			exit(EXIT_FAILURE); //TODO return error instead
-		}
-		if (n == 0){
-			printf("READING 0????\n");
-			break;
-		}
-
+	if(size > 0 && size < INT_MAX){
+		*buf = malloc(size);
+		miss = size;
+		read = 0;
 		
-		miss -= n;
-		read += n;
-		
-		printf("missing %d read %d, n %d",miss, read, n);			
+		while (read < size){
+			if((n=recv(from, *buf+read, miss,0)) < 0){
+				printf("Error receiving\n");
+				read = -1;
+				free(*buf);
+				break;
+			}
+			if (n == 0){
+				printf("READING 0????\n");
+				read = -1;
+				free(*buf);
+				break;
+			}
+			miss -= n;
+			read += n;
+			
+			printf("missing %d read %d, n %d",miss, read, n);			
+		}
+	}else{
+		printf("UUUPS negative size\n");
+		*buf = NULL;
+		read = -1;
 	}
-	
+	printf("///////////////////////\n");
+	free(s);
 	return read;
 }
 
@@ -110,4 +122,73 @@ int createListenerUnix(){
 		close(sfd);
 	}
 	return sfd;
+}
+
+
+int setupParentListener(){
+	int yes, sfd;
+	struct sockaddr_in my_addr;
+
+	unlink(BACK_UP_SOCKET);
+
+	if((sfd = socket(AF_INET, SOCK_STREAM, 0) ) == -1){
+		printf("Couldn't create socket: %s\n", strerror(errno));
+		return -1;
+	}
+
+	
+	if(( setsockopt(sfd,SOL_SOCKET,SO_REUSEADDR, &yes, sizeof(int)) ) == -1){
+		printf("Couldn't set socket: %s\n", strerror(errno));
+		close(sfd);
+		return -1;
+	}
+
+	memset(&my_addr, 0, sizeof(struct sockaddr_in));
+	my_addr.sin_family = AF_INET;
+	my_addr.sin_port = htons(10101);
+	my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+	if(bind(sfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr_in)) == -1){
+		printf("Couldn't bind socket: %s\n", strerror(errno));
+		close(sfd);
+		return -1;
+	}
+
+	if (listen(sfd, 1) == -1){
+		printf("Couldn't listen: %s\n", strerror(errno));
+		close(sfd);
+		return -1;
+	}
+	return sfd;
+}
+
+int createListenerInet(char * opt){
+	int bfd, port;
+	struct sockaddr_in my_addr;
+	char ip[15];
+
+	if((bfd = socket(AF_INET, SOCK_STREAM, 0) ) == -1){
+		printf("Couldn't create socket to communicate with parent clipboard: %s\n", strerror(errno));
+		return -1;
+	}
+	
+	memset(&my_addr, 0, sizeof(struct sockaddr_in));
+	my_addr.sin_family = AF_INET;
+	
+	if(sscanf(opt, "%s %d", ip, &port) != 2){
+		return -1;	
+	}
+	
+	my_addr.sin_port = htons(port);
+	
+	if(inet_aton(ip, &my_addr.sin_addr) == 0){
+		return -1;
+	}
+	
+	if(connect(bfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr_in))== -1){
+		printf("Couldn't connect to parent clipboard: %s\n", strerror(errno));
+		return -1;
+	}
+	
+	return bfd;
 }
