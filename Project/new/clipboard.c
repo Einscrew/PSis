@@ -51,35 +51,45 @@ t_list* childsList;
 
 void broadcastReq(int size, char * request, int fd){
 	if(parent_fd == -1 || fd == parent_fd){ // dispatch to all childs
+
 		Elm * i;
-		pthread_rwlock_wrlock(&cLstLock);
+		
 		t_list* aux = childsList;
 		if(aux == NULL)
 			printf("NO CHILDS TO ANSWER\n");
+
 		while(aux != NULL){
+
 			i = (Elm *)getItem(aux);
 			printf("broadcast to %d result: ", i->fd );
 			fflush(stdout);
 			if(i->fd > 0){
+				pthread_mutex_lock(&(i->fdMutex));
 				if(sendMsg(i->fd, request, size) == -1){
 					printf("X\n");fflush(stdout);
 					i->fd = -2;
 				}else{
 					printf("OK\n");fflush(stdout);
 				}
+				pthread_mutex_unlock(&(i->fdMutex));
 			}else{
 				printf("|||  i->fd<= 0  |||\n");
 			}
 			aux = next(aux);
 		}
+
 		pthread_rwlock_unlock(&cLstLock);
+
 	}else{ // dispatch to the parent
+
 		printf("Send to parent\n");
 		pthread_mutex_lock(&parentMutex);
 		sendMsg(parent_fd, request, size);
 		pthread_mutex_unlock(&parentMutex);
+
 	}
 }
+
 int waitRegion(int region, char ** content){
 	int size;
 	pthread_mutex_lock(&waitlock[region]);
@@ -95,7 +105,6 @@ int waitRegion(int region, char ** content){
 	return size;
 }
 
-
 int handleRequest(int size, char* request, int fd){
 	int region = request[1]-'0', b_size; //LONG INT??
 	char * buf = NULL;
@@ -103,12 +112,16 @@ int handleRequest(int size, char* request, int fd){
 	switch(request[0]){
 		case 'C':
 
+			buf = malloc(size);
+			memcpy(buf, request, size);
+			
 			if(parent_fd == -1 || fd == parent_fd){
 				//local save
 				//lock region 2 copy as reader
 				pthread_rwlock_wrlock(&cliplock[region]);
 
 				printf("entering\n");
+				fflush(stdout);
 				if(clip[region].data != NULL){
 					printf("freeing %d\n", region);
 					clip[region].size = 0;
@@ -128,12 +141,17 @@ int handleRequest(int size, char* request, int fd){
 				//unlock region
 				sleep(5);
 				printf("leaving\n");
+				fflush(stdout);
 				pthread_cond_broadcast(&w[region]);
+
+				pthread_rwlock_wrlock(&cLstLock);
 				pthread_rwlock_unlock(&cliplock[region]);
 
 				if(size-2 == 0) free(request);
 			}
-			broadcastReq(size, request, fd); // dois casos
+
+			broadcastReq(size, buf, fd); // dois casos
+			free(buf);
 			break;
 
 		case 'P':
@@ -146,7 +164,7 @@ int handleRequest(int size, char* request, int fd){
 			printf("leaving write\n");
 			pthread_rwlock_unlock(&cliplock[region]);
 			
-			if(sendMsg(fd, buf, size) == -1){
+			if(sendMsg(fd, buf, b_size) == -1){
 				close(fd);
 				free(buf);
 				return -1;
@@ -284,6 +302,7 @@ void attend_clip(void * arg){
 	while ((n = recvMsg(elm->fd, (void**)&msg)) > 0){
 
 		if( n >= 2 && (msg[0] == 'C') && msg[1] <= '9' && msg[1] >= '0'){
+			printf("[attend_clip][fd:%d] C|",elm->fd );
 			if( handleRequest(n, msg, elm->fd) == -1 ){
 				//TODO
 			}
@@ -353,6 +372,7 @@ void listenChildren(){
 		}
 	}
 }
+
 void initialSync(int *fd){
 	int n, region;
 	char * msg = NULL;

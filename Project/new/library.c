@@ -47,8 +47,6 @@ int clipboard_copy(int clipboard_id, int region, void *buf, size_t count){
 	msg[1]=region+'0';
 	memcpy(msg+2, buf, count);
 	
-	printf("write:%ld\n", finalsize);
-
 	int r = sendMsg(clipboard_id, msg, finalsize);
 	return (r == -1)?(0):(r);
 }
@@ -71,10 +69,8 @@ int clipboard_paste(int clipboard_id, int region, void *buf, size_t count){
 	if((r = recvMsg(clipboard_id, (void**)&p)) == -1){
 		return 0;
 	}
-	printf("\nreceived %d bytes\n",r);
-
 	count = (r<count)?r:count; // TO CHANGE
-	printf("Received from [%d] - %s||\n",region, (char*)p);
+	//printf(">>>%s|%d\n", (char*)p, (int)count );
 	memcpy(buf, p, count);
 	
 	free(p);
@@ -100,10 +96,11 @@ int clipboard_wait(int clipboard_id, int region, void *buf, size_t count){
 	if((r = recvMsg(clipboard_id, (void**)&p)) == -1){
 		return 0;
 	}
-	printf("\nreceived %d bytes\n",r);
+	//printf("\nreceived %d bytes\n",r);
 
 	count = (r<count)?r:count;
-	printf("Received from [%d] - %s||\n",region, (char*)p);
+	//printf("Received from [%d] - %s||\n",region, (char*)p);
+
 	memcpy(buf, p, count);
 	
 	free(p);

@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <string.h>
+
 extern char *optarg;
 
 int main(int argc, char*argv[]){
@@ -28,7 +30,7 @@ int main(int argc, char*argv[]){
 		}*/
 		char c, opt, done;
 		char dados[10];
-		int fd = -1;
+		int fd = -1, i = 0;
 
 		while ((opt = getopt(argc, argv, "c:")) != -1) {
 		    switch (opt) {
@@ -46,6 +48,7 @@ int main(int argc, char*argv[]){
 			fprintf(stderr, "Usage: %s [-c path/to/AF_UNIsocket]\n",argv[0]);
 			exit(EXIT_FAILURE);
 		}
+		printf("[%d]\n", getpid());
 		while((c=getchar()) != 'q')		
 		{
 			if(c == 'c'){
@@ -54,7 +57,10 @@ int main(int argc, char*argv[]){
 				{
 					c=getchar();
 					if(c <= '9' && c >= '0'){
-						clipboard_copy(fd, c-'0', &c, 1);
+						pid_t p = getpid();
+						sprintf(dados, "%d",p );
+						printf("[%s]%d|\n", dados, (int)strlen(dados));
+						clipboard_copy(fd, c-'0', &dados, strlen(dados)+1);
 						printf("sendt\n");
 						done = 0;
 					}
@@ -65,8 +71,9 @@ int main(int argc, char*argv[]){
 				{
 					c=getchar();
 					if(c <= '9' && c >= '0'){
-						clipboard_paste(fd, c-'0', dados, 10);
+						i = clipboard_paste(fd, c-'0', dados, 10);
 						
+						printf(">%s\n", dados);
 						done = 0;
 					}
 				}
@@ -76,8 +83,9 @@ int main(int argc, char*argv[]){
 				{
 					c=getchar();
 					if(c <= '9' && c >= '0'){
-						clipboard_wait(fd, c-'0', dados, 10);
+						i = clipboard_wait(fd, c-'0', dados, 10);
 						
+						printf(">%s\n", dados);
 						done = 0;
 					}
 				}

@@ -1,7 +1,7 @@
 CC=gcc
 FLAGS=-lpthread
 EXTRA=-Wall -g
-APP=app
+APP=app app_test
 CLIP=clipboard
 ALL=$(CLIP) $(APP)
 
@@ -14,7 +14,10 @@ all: $(ALL)
 clipboard: clipboard.c connection.o library.o list.o
 	$(CC) $^ -o $@ $(FLAGS) $(EXTRA)
 		
-app: app_teste.c connection.o library.o
+app_test: app_teste.c connection.o library.o
+	$(CC) $^ -o $@ $(FLAGS) $(EXTRA)
+
+app: app.c connection.o library.o
 	$(CC) $^ -o $@ $(FLAGS) $(EXTRA)
 
 #############################################################

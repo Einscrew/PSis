@@ -27,7 +27,7 @@ int sendMsg(int to, void * buf, int size){
 		miss -= n;
 		written += n;
 	}
-	
+
 	if(n < 0 ) return -1;	
 
 	written = 0;
@@ -60,20 +60,20 @@ int recvMsg(int from, void ** buf){
 
 	memcpy(&size, s, sizeof(int));
 	//size should be changed @ this point
-	printf("->%d going to read\n", size );
+	//printf("->%d going to read from: %d\n", size, from );
 	if(size > 0 && size < INT_MAX){
 		*buf = malloc(size);
 		miss = size;
 		read = 0;
 		
 		while (read < size){
-			if((n=recv(from, *buf+read, miss,0)) < 0){
+			if((n=recv(from, *buf+read, miss, 0)) < 0){
 				printf("Error receiving\n");
 				read = -1;
 				free(*buf);
 				break;
 			}
-			if (n == 0){
+			if(n == 0){
 				printf("READING 0????\n");
 				read = -1;
 				free(*buf);
@@ -82,14 +82,15 @@ int recvMsg(int from, void ** buf){
 			miss -= n;
 			read += n;
 			
-			printf("missing %d read %d, n %d",miss, read, n);			
+			//printf("missing %d read %d, n %d",miss, read, n);			
 		}
+
 	}else{
 		printf("UUUPS negative size\n");
 		*buf = NULL;
 		read = -1;
 	}
-	printf("///////////////////////\n");
+	//printf("///////////////////////\n");
 	free(s);
 	return read;
 }
