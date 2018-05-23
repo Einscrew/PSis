@@ -11,8 +11,10 @@
 #include <stdio.h>
 
 #include <unistd.h>
+#include <signal.h>
 
 #include <pthread.h>
+
 #include "connection.h"
 
 #include "list.h"
@@ -65,6 +67,8 @@ void broadcastReq(int size, char * request, int fd){
 				}else{
 					printf("OK\n");fflush(stdout);
 				}
+			}else{
+				printf("|||  i->fd<= 0  |||\n");
 			}
 			aux = next(aux);
 		}
@@ -389,6 +393,12 @@ int main(int argc, char *argv[]){
 	socklen_t cli_addrlen;
 
 	int i, n = 4 ,sfd, cfd;
+
+	void (*old_handler)(int);
+	if( (old_handler = signal(SIGPIPE, SIG_IGN)) == SIG_ERR) {
+		printf("Houve um conflito a ignorar os sinais SIGPIPEs\n");
+		exit(1);
+	}
 
 	char * working = malloc(sizeof(char)*n);
 	for (i = 0; i < n; ++i)
