@@ -9,6 +9,8 @@ int createListenerUnix();
 
 int setupParentListener();
 
-int createListenerInet(char * opt);
+int connect2parent(char * argip, char * argport);
+
+
 
 #endif

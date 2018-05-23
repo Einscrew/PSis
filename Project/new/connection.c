@@ -13,10 +13,12 @@
 #include <unistd.h>
 
 #include <limits.h>
+#include <sys/stat.h>
 
 #include "clipboard.h"
 #include "connection.h"
 
+int PORT = 10101;
 //TODO: if n == 0 what??
 int sendMsg(int to, void * buf, int size){
 	int written = 0,  n = 0, miss = sizeof(int);
@@ -96,10 +98,17 @@ int recvMsg(int from, void ** buf){
 int createListenerUnix(){
 	int sfd;
 	char pathSocket[108];
-	sprintf(pathSocket, "./%s", CLIPBOARD_SOCKET);
+
+	sprintf(pathSocket, "./%d", getpid());
+	if(mkdir(pathSocket, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1){
+		printf("Couldn't creat socket folder: %s\n", strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+	
+	sprintf(pathSocket, "./%d/%s", getpid(), CLIPBOARD_SOCKET);
 	struct sockaddr_un my_addr;
 
-	unlink(CLIPBOARD_SOCKET);
+	unlink(pathSocket);
 
 	if((sfd = socket(AF_UNIX, SOCK_STREAM, 0) ) == -1){
 		printf("Couldn't open socket: %s\n", strerror(errno));
@@ -126,10 +135,9 @@ int createListenerUnix(){
 
 
 int setupParentListener(){
-	int yes, sfd;
+	int yes, sfd, port;
 	struct sockaddr_in my_addr;
-
-	unlink(BACK_UP_SOCKET);
+	char buf[6], *ip =NULL;
 
 	if((sfd = socket(AF_INET, SOCK_STREAM, 0) ) == -1){
 		printf("Couldn't create socket: %s\n", strerror(errno));
@@ -143,17 +151,47 @@ int setupParentListener(){
 		return -1;
 	}
 
-	memset(&my_addr, 0, sizeof(struct sockaddr_in));
-	my_addr.sin_family = AF_INET;
-	my_addr.sin_port = htons(10101);
-	my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-	if(bind(sfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr_in)) == -1){
-		printf("Couldn't bind socket: %s\n", strerror(errno));
-		close(sfd);
-		return -1;
+	FILE * ports = NULL;
+	if( (ports=fopen("ports.txt", "r" )) == NULL ){
+		perror("fopen");
+		exit(EXIT_FAILURE);
 	}
 
+	fgets(buf, 6, ports);//lê porto
+	sscanf(buf, "%d", &port);
+
+
+	
+	//char name [256];
+	//gethostname(name, 256);
+	//struct hostent * h = gethostbyname(name);
+	while(1){
+
+		
+		if( port >= 65536){
+			printf("Couldn't bind socket\n");
+			exit(EXIT_FAILURE);
+		}
+		memset(&my_addr, 0, sizeof(struct sockaddr_in));
+		my_addr.sin_family = AF_INET;
+		
+		my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+		my_addr.sin_port = htons(port);
+
+
+		if(bind(sfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr_in)) == -1){
+		
+		}else{
+			if((ip=inet_ntoa(my_addr.sin_addr)) != NULL){
+				printf("IP:%s\n",ip );
+			}
+			printf("Port: %d\n", port);
+			break;
+		}
+		port++;
+	}
+	
+	
 	if (listen(sfd, 1) == -1){
 		printf("Couldn't listen: %s\n", strerror(errno));
 		close(sfd);
@@ -162,10 +200,10 @@ int setupParentListener(){
 	return sfd;
 }
 
-int createListenerInet(char * opt){
-	int bfd, port;
+int connect2parent(char * argip, char * argport){
+	int bfd, port = atoi(argport);
 	struct sockaddr_in my_addr;
-	char ip[15];
+
 
 	if((bfd = socket(AF_INET, SOCK_STREAM, 0) ) == -1){
 		printf("Couldn't create socket to communicate with parent clipboard: %s\n", strerror(errno));
@@ -174,14 +212,13 @@ int createListenerInet(char * opt){
 	
 	memset(&my_addr, 0, sizeof(struct sockaddr_in));
 	my_addr.sin_family = AF_INET;
-	
-	if(sscanf(opt, "%s %d", ip, &port) != 2){
-		return -1;	
-	}
+
+	printf("Connecting to %s:%d\n", argip, port);
 	
 	my_addr.sin_port = htons(port);
 	
-	if(inet_aton(ip, &my_addr.sin_addr) == 0){
+	if(inet_aton(argip, &my_addr.sin_addr) == 0){
+		printf("Invalid ip\n");
 		return -1;
 	}
 	
