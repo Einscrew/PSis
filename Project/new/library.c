@@ -9,6 +9,7 @@
 
 #include <unistd.h>
 
+#include "utils.h"
 #include "connection.h"
 #include "clipboard.h"
 
@@ -41,7 +42,7 @@ int clipboard_copy(int clipboard_id, int region, void *buf, size_t count){
 	long int finalsize = count+sizeof(char)+sizeof(char);
 	
 	// C|10|olawjmidoanwdanwjabwdjawdawd
-	char *msg = (char*)malloc(finalsize);
+	char *msg = (char*)mallocV(finalsize, ": copy msg alloc");
 
 	msg[0]='C';
 	msg[1]=region+'0';

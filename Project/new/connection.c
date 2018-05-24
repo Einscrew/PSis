@@ -17,6 +17,7 @@
 
 #include "clipboard.h"
 #include "connection.h"
+#include "utils.h"
 
 int PORT = 10101;
 //TODO: if n == 0 what??
@@ -44,7 +45,7 @@ int sendMsg(int to, void * buf, int size){
 //TODO: if n == 0 what??
 int recvMsg(int from, void ** buf){
 	int read = 0,  n = 1, miss = sizeof(int), size = 0;
-	char * s = malloc(sizeof(int));
+	char * s = mallocV(sizeof(int), "recv tmp variables");
 	//get size of read
 	if(buf == NULL){
 		return -1;
@@ -62,7 +63,7 @@ int recvMsg(int from, void ** buf){
 	//size should be changed @ this point
 	//printf("->%d going to read from: %d\n", size, from );
 	if(size > 0 && size < INT_MAX){
-		*buf = malloc(size);
+		*buf = mallocV(size, "recv tmp variables");
 		miss = size;
 		read = 0;
 		

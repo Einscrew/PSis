@@ -10,24 +10,6 @@ extern char *optarg;
 
 int main(int argc, char*argv[]){
 
-		
-		
-		/*while(1){
-			switch fgetc(){
-				case 'P':
-					
-					break;
-
-				case 'C':
-					fgets(dados, 10, stdin);
-					clipboard_copy(fd, 0, dados, sizeof(dados));
-					break;
-
-				default:
-					break;
-			}
-			
-		}*/
 		char c, opt, done;
 		char dados[10];
 		int fd = -1, i = 0;

@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <strings.h>
 
+#include "utils.h"
 #include "list.h"
 
 
@@ -61,8 +62,7 @@ t_list  *new(t_list* lp, Item this, int reuseNode(Item))
     /*Coloca-o como head da lista*/
     if(lp==NULL)
     {
-	    t_list * new = (t_list*) malloc(sizeof(t_list));
-	    VerificaMalloc(new);
+	    t_list * new = (t_list*) mallocV(sizeof(t_list), ": new list node");
         new->this = this;
         lp=new;
         new->prox = NULL;
@@ -83,8 +83,7 @@ t_list  *new(t_list* lp, Item this, int reuseNode(Item))
             aux=aux->prox;
         }
 
-        t_list * new = (t_list*) malloc(sizeof(t_list));
-	    VerificaMalloc(new);
+        t_list * new = (t_list*) mallocV(sizeof(t_list), ": new list node");
 
         new->this = this;
         aux->prox=new;

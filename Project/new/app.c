@@ -9,7 +9,7 @@
 extern char *optarg;
 
 
-int SIZE = 1090021;
+int SIZE = 5000000;
 
 int main(int argc, char*argv[]){
 
@@ -38,13 +38,13 @@ int main(int argc, char*argv[]){
 			    	c = optarg[0];
 			    	break;
 			    default: /* '?' */
-			        fprintf(stderr, "Usage: %s [-c path/to/AF_UNIsocket]\n", argv[0]);
+			        fprintf(stderr, "Usage: %s -c path/to/AF_UNIXsocket -f filename -r 0 -i c|p|w\n", argv[0]);
 			        exit(EXIT_FAILURE);
 		    }
 		}
 
 		if(fd == -1){
-			fprintf(stderr, "Usage: %s [-c path/to/AF_UNIsocket]\n",argv[0]);
+			fprintf(stderr, "Usage: %s -c path/to/AF_UNIXsocket -f filename -r 0 -i c|p|w\n", argv[0]);
 			exit(EXIT_FAILURE);
 		}
 
@@ -54,7 +54,7 @@ int main(int argc, char*argv[]){
 				fseek(f,0,SEEK_END); //go to end
 				index = ftell(f); //get position at end (length)
 				
-				fseek(f,0,SEEK_SET); //go to beg.
+				rewind(f);//,0,SEEK_SET); //go to beg.
 				
 				fread(dados,index,1,f); //read into buffer
 				fclose(f);

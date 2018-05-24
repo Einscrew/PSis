@@ -16,8 +16,9 @@
 #include <pthread.h>
 
 #include "connection.h"
-
+#include "utils.h"
 #include "list.h"
+
 
 #define FALSE 0
 #define TRUE 1
@@ -48,6 +49,27 @@ int parent_fd = -1;
 
 pthread_rwlock_t cLstLock;
 t_list* childsList;
+
+
+void sigint_handler(int n){
+    close(parent_fd);
+    printf("Clipboard terminating\n");
+    exit(EXIT_SUCCESS);
+}
+
+void printClipboard(){
+	printf("-----------------------------------\n");
+	for ( int i = 0; i < 10; ++i)
+	{
+		pthread_rwlock_rdlock(&cliplock[i]);
+		printf("[%d]-[", i);
+		fflush(stdout);
+		write(1, clip[i].data, clip[i].size);
+		printf("]-%d\n", clip[i].size );
+		fflush(stdout);
+		pthread_rwlock_unlock(&cliplock[i]);
+	}
+}
 
 void broadcastReq(int size, char * request, int fd){
 	if(parent_fd == -1 || fd == parent_fd){ // dispatch to all childs
@@ -98,7 +120,7 @@ int waitRegion(int region, char ** content){
 
 	pthread_rwlock_rdlock(&cliplock[region]);
 	size = clip[region].size;
-	*content = malloc(size);
+	*content = mallocV(size, ": wait regionutils.o");
 	memcpy(*content, clip[region].data, size);
 	pthread_rwlock_unlock(&cliplock[region]);
 	
@@ -112,7 +134,7 @@ int handleRequest(int size, char* request, int fd){
 	switch(request[0]){
 		case 'C':
 
-			buf = malloc(size);
+			buf = mallocV(size, ": copy tmp buf");
 			memcpy(buf, request, size);
 			
 			if(parent_fd == -1 || fd == parent_fd){
@@ -158,7 +180,7 @@ int handleRequest(int size, char* request, int fd){
 			pthread_rwlock_rdlock(&cliplock[region]);
 			printf("on the write\n");
 			b_size = clip[region].size;
-			buf = malloc(b_size);
+			buf = mallocV(b_size, ": paste tmp buf");
 			memcpy(buf, clip[region].data, b_size);
 			sleep(5);
 			printf("leaving write\n");
@@ -239,16 +261,8 @@ void attend_app(void * arg){
 			break;
 		}		
 	}
-	printf("-----------------------------------\n");
-	for ( i = 0; i < 10; ++i)
-	{
-		printf("[%d]-[", i);
-		fflush(stdout);
-		write(1, clip[i].data, clip[i].size);
-		printf("]-%d\n", clip[i].size );
-		fflush(stdout);
-	}
-
+	
+	printClipboard();
 	close(cfd);
 	*(a->working) = -1;
 }
@@ -263,7 +277,7 @@ void attend_clip(void * arg){
 		pthread_rwlock_rdlock(&cliplock[i]);			
 		b_size = clip[i].size+2;
 		if(b_size > 2){
-			buf = malloc(b_size);
+			buf = mallocV(b_size, ": attend sync" );
 			memcpy(buf, clip[i].data-2, b_size);
 		}
 		pthread_rwlock_unlock(&cliplock[i]);
@@ -286,7 +300,7 @@ void attend_clip(void * arg){
 		}
 	}
 
-	buf = malloc(1);
+	buf = mallocV(1, ": finalizing sync");
 	buf[0]='S'; // END SYNC
 
 	pthread_mutex_lock(&(elm->fdMutex));
@@ -358,7 +372,7 @@ void listenChildren(){
 				printf("One clipboard just connected, fd:%d\n", clip_fd);
 				fflush(stdout);
 
-				newElm = malloc(sizeof(Elm));
+				newElm = mallocV(sizeof(Elm), ": new list element");
 				newElm->fd = clip_fd;
 				pthread_mutex_init(&(newElm->fdMutex), NULL);
 
@@ -414,19 +428,25 @@ int main(int argc, char *argv[]){
 
 	int i, n = 4 ,sfd, cfd;
 
+	struct sigaction act_INT;
+	act_INT.sa_handler = sigint_handler;
+	sigemptyset(&act_INT.sa_mask);
+	act_INT.sa_flags=0;
+	sigaction(SIGINT, &act_INT, NULL);
+
 	void (*old_handler)(int);
 	if( (old_handler = signal(SIGPIPE, SIG_IGN)) == SIG_ERR) {
-		printf("Houve um conflito a ignorar os sinais SIGPIPEs\n");
-		exit(1);
+		printf("Couldn't ignore SIGPIPE\n");
+		exit(EXIT_FAILURE);
 	}
 
-	char * working = malloc(sizeof(char)*n);
+	char * working = mallocV(sizeof(char)*n, ": working initial vector");
 	for (i = 0; i < n; ++i)
 	{
 		working[i] = -1;
 	}
-	argT * args = malloc(sizeof(argT) * n);
-	pthread_t * threads = malloc(sizeof(pthread_t) * n);
+	argT * args = mallocV(sizeof(argT) * n, ": threads args");
+	pthread_t * threads = mallocV(sizeof(pthread_t) * n, ": threads themselfs");
 	pthread_t th;
 	for (i = 0; i < 10; ++i){
 		clip[i].data=NULL;
