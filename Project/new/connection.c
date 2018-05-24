@@ -122,7 +122,7 @@ int createListenerUnix(){
 	strncpy(my_addr.sun_path, pathSocket, sizeof(my_addr.sun_path)-1);
 
 	if(bind(sfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr_un)) == -1){
-		printf("Couldn't bind socket: %s\n", strerror(errno));
+		printf("Couldn't bind UNIX socket: %s\n", strerror(errno));
 		exit(EXIT_FAILURE);
 		close(sfd);
 	}
@@ -183,7 +183,7 @@ int setupParentListener(){
 
 		
 		if( port >= 65536 || port > portM){
-			printf("Couldn't bind socket\n");
+			printf("Couldn't bind AF_INET socket\n");
 			exit(EXIT_FAILURE);
 		}
 		memset(&my_addr, 0, sizeof(struct sockaddr_in));
