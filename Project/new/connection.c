@@ -137,7 +137,7 @@ int createListenerUnix(){
 
 
 int setupParentListener(){
-	int yes, sfd, port;
+	int yes, sfd, portM, portm, port;
 	struct sockaddr_in my_addr;
 	char buf[6], *ip =NULL;
 
@@ -160,8 +160,20 @@ int setupParentListener(){
 	}
 
 	fgets(buf, 6, ports);//lê porto
-	sscanf(buf, "%d", &port);
+	sscanf(buf, "%d", &portM);
 
+	fgets(buf, 6, ports);//lê porto
+	sscanf(buf, "%d", &portm);
+
+	fclose(ports);
+
+	if(portM < portm){
+		port = portM;
+		portM = portm;
+		portm = port;
+	}
+
+	port = portm;
 
 	
 	//char name [256];
@@ -170,7 +182,7 @@ int setupParentListener(){
 	while(1){
 
 		
-		if( port >= 65536){
+		if( port >= 65536 || port > portM){
 			printf("Couldn't bind socket\n");
 			exit(EXIT_FAILURE);
 		}
