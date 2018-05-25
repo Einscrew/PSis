@@ -45,3 +45,4 @@ c: clean cdir
 
 
 #echo -e '\x0\x1\x0\x0\x432e8o2uhd aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaawydgawdawdawdawdawdawdawjiiiiiiiiiiiiiiiiiiiiiiiiis\x4\x0\x0\x0\x43231' | nc -U /home/einstein/IST/MSc/PSis/repo/Project/new/clipSocket
+#https://stackoverflow.com/questions/13558067/what-does-this-valgrind-warning-mean-warning-set-address-range-permss

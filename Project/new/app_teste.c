@@ -6,13 +6,31 @@
 
 #include <string.h>
 
+#include "utils.h"
+
 extern char *optarg;
 
 int main(int argc, char*argv[]){
 
-		char c, opt, done;
+		char c, opt, done, s;
 		char dados[10];
+		int size = -1;
 		int fd = -1, i = 0;
+		void * p;
+
+		/*
+		char * p = malloc(808464432);
+		//printf("%c\n", (p==NULL)?'y':'n');
+		if(p!=NULL){
+			for (int i = 0; i < 808464432; ++i)
+			{
+				p[i]='0';
+			}
+			p[i-1] = '\0';
+			printf("%s\n",p );
+		}
+		exit(1);
+		*/
 
 		while ((opt = getopt(argc, argv, "c:")) != -1) {
 		    switch (opt) {
@@ -30,7 +48,8 @@ int main(int argc, char*argv[]){
 			fprintf(stderr, "Usage: %s [-c path/to/AF_UNIsocket]\n",argv[0]);
 			exit(EXIT_FAILURE);
 		}
-		printf("[%d]\n", getpid());
+		
+		printf("Insert option [c|p|w] region[0-9]\n");
 		while((c=getchar()) != 'q')		
 		{
 			if(c == 'c'){
@@ -39,12 +58,24 @@ int main(int argc, char*argv[]){
 				{
 					c=getchar();
 					if(c <= '9' && c >= '0'){
-						pid_t p = getpid();
-						sprintf(dados, "%d",p );
-						printf("[%s]%d|\n", dados, (int)strlen(dados));
-						clipboard_copy(fd, c-'0', &dados, strlen(dados)+1);
+						printf("Tell the size of the content to copy\n");
+						while(size < 0){
+							scanf("%d\n", &size);
+						}
+
+						p = mallocV(size, ": Couldn't allocate enought\n");
+						i = 0;
+						printf("Which char to send: \n"); fflush(stdout);
+						s=getchar();
+						while(i < size){
+							memcpy(p+i, &s, 1);
+							i++;
+						}
+
+						clipboard_copy(fd, c-'0', p, size);
 						printf("sendt\n");
 						done = 0;
+						free(p);
 					}
 				}
 			}else if(c == 'p'){
@@ -79,6 +110,7 @@ int main(int argc, char*argv[]){
 					done = 0;
 				
 			}
+			if(c != '\n')printf("Insert option [c|p|w] region[0-9]\n");
 		}
 /*
 			clipboard_copy(fd, 6, "uma", 3);

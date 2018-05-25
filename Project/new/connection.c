@@ -61,7 +61,8 @@ int recvMsg(int from, void ** buf){
 
 	memcpy(&size, s, sizeof(int));
 	//size should be changed @ this point
-	//printf("->%d going to read from: %d\n", size, from );
+	printf("->%d going to read from: %d\n", size, from );
+
 	if(size > 0 && size < INT_MAX){
 		*buf = mallocV(size, "recv tmp variables");
 		miss = size;
@@ -72,12 +73,14 @@ int recvMsg(int from, void ** buf){
 				printf("Error receiving\n");
 				read = -1;
 				free(*buf);
+				*buf =NULL;
 				break;
 			}
 			if(n == 0){
 				printf("READING 0????\n");
 				read = -1;
 				free(*buf);
+				*buf =NULL;
 				break;
 			}
 			miss -= n;
@@ -86,8 +89,10 @@ int recvMsg(int from, void ** buf){
 			//printf("missing %d read %d, n %d",miss, read, n);			
 		}
 
+	}else if(size == 0){
+		*buf = NULL;
+		read = 0;
 	}else{
-		printf("UUUPS negative size\n");
 		*buf = NULL;
 		read = -1;
 	}
@@ -137,9 +142,9 @@ int createListenerUnix(){
 
 
 int setupParentListener(){
-	int yes, sfd, portM, portm, port;
+	int yes = 0, sfd = -1, portM, portm, port;
 	struct sockaddr_in my_addr;
-	char buf[6], *ip =NULL;
+	char buf[6];
 
 	if((sfd = socket(AF_INET, SOCK_STREAM, 0) ) == -1){
 		printf("Couldn't create socket: %s\n", strerror(errno));
@@ -147,7 +152,7 @@ int setupParentListener(){
 	}
 
 	
-	if(( setsockopt(sfd,SOL_SOCKET,SO_REUSEADDR, &yes, sizeof(int)) ) == -1){
+	if(( setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) ) == -1){
 		printf("Couldn't set socket: %s\n", strerror(errno));
 		close(sfd);
 		return -1;
@@ -196,9 +201,6 @@ int setupParentListener(){
 		if(bind(sfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr_in)) == -1){
 		
 		}else{
-			if((ip=inet_ntoa(my_addr.sin_addr)) != NULL){
-				printf("IP:%s\n",ip );
-			}
 			printf("Port: %d\n", port);
 			break;
 		}
@@ -227,19 +229,20 @@ int connect2parent(char * argip, char * argport){
 	memset(&my_addr, 0, sizeof(struct sockaddr_in));
 	my_addr.sin_family = AF_INET;
 
-	printf("Connecting to %s:%d\n", argip, port);
+	printf("Connecting to %s:%d...\t", argip, port);
 	
 	my_addr.sin_port = htons(port);
 	
 	if(inet_aton(argip, &my_addr.sin_addr) == 0){
-		printf("Invalid ip\n");
+		printf("[Invalid ip]\n");
 		return -1;
 	}
 	
 	if(connect(bfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr_in))== -1){
-		printf("Couldn't connect to parent clipboard: %s\n", strerror(errno));
+		printf("[Couldn't connect to parent clipboard: %s]\n", strerror(errno));
 		return -1;
 	}
-	
+
+	printf("[Success]\n");
 	return bfd;
 }

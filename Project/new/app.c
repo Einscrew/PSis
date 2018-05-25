@@ -18,22 +18,29 @@ int main(int argc, char*argv[]){
 		int fd = -1, r, index = 0;
 		FILE * f = NULL;
 
-		while ((opt = getopt(argc, argv, "c:f:r:i:")) != -1) {
+		while ((opt = getopt(argc, argv, "c:f:s:r:i:")) != -1) {
 		    switch (opt) {
 			    case 'c':
 					fd = clipboard_connect(optarg);
 			        break;
 			    case 'f':
+			    	printf("FILE\n");
 			    	if((f = fopen(optarg, "rb")) == NULL){
 			    		fprintf(stderr, "Not a valid file [%s]\n", optarg);	
 			    		exit(EXIT_FAILURE);	
 			    	}
+			    	break;
+			    case 's':
+			    	index = strlen(optarg);
+			    	memcpy(dados, optarg, index);
+			    	break;
 			    case 'r':
 			    	r = atoi(optarg);
 			    	if(r > 9 || r < 0){
 			    		fprintf(stderr, "Not a valid region [%d]\n", r);	
 			    		exit(EXIT_FAILURE);	
 			    	}
+			    	break;
 			    case 'i':
 			    	c = optarg[0];
 			    	break;
@@ -51,14 +58,15 @@ int main(int argc, char*argv[]){
 		switch(c){
 			case 'c':
 			//https://bytes.com/topic/c/answers/917991-reading-jpg-file-binary
-				fseek(f,0,SEEK_END); //go to end
-				index = ftell(f); //get position at end (length)
-				
-				rewind(f);//,0,SEEK_SET); //go to beg.
-				
-				fread(dados,index,1,f); //read into buffer
-				fclose(f);
-
+				if(f != NULL){
+					fseek(f,0,SEEK_END); //go to end
+					index = ftell(f); //get position at end (length)
+					
+					rewind(f);//,0,SEEK_SET); //go to beg.
+					
+					fread(dados,index,1,f); //read into buffer
+					fclose(f);
+				}
 				//printf("cpy\n");
 				
 				//printf("%d-%c\n", index, (dados[index]==EOF)?'y':'n');
@@ -71,7 +79,8 @@ int main(int argc, char*argv[]){
 				write(1, dados, index);
 				break;
 			case 'w':
-				clipboard_wait(fd, r, &dados, strlen(dados)+1);
+				index = clipboard_wait(fd, r, &dados, SIZE);
+				write(1, dados, index);
 				break;
 			default:
 				fprintf(stderr, "Not a valid instruction [%c]\n", c);	

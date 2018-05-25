@@ -37,7 +37,7 @@ int clipboard_connect(char * clipboard_dir){
 }
 
 int clipboard_copy(int clipboard_id, int region, void *buf, size_t count){
-	if(region < 0 || region > 9) return 0;
+	if(region < 0 || region > 9 || count < 0 || clipboard_id < 0) return 0;
 
 	long int finalsize = count+sizeof(char)+sizeof(char);
 	
@@ -54,7 +54,7 @@ int clipboard_copy(int clipboard_id, int region, void *buf, size_t count){
 
 
 int clipboard_paste(int clipboard_id, int region, void *buf, size_t count){
-	if(region < 0 || region > 9) return 0;
+	if(region < 0 || region > 9 || count <= 0 || clipboard_id < 0) return 0;
 
 	char toSend[2];
 	void * p = NULL;
@@ -66,8 +66,9 @@ int clipboard_paste(int clipboard_id, int region, void *buf, size_t count){
 	if(sendMsg(clipboard_id, toSend, 2) == -1)
 		return 0;
 
+	memset(buf, '\0', count);
 	// 28|olawjmidoanwdanwjabwdjawdawd|
-	if((r = recvMsg(clipboard_id, (void**)&p)) == -1){
+	if((r = recvMsg(clipboard_id, (void**)&p)) <= 0){
 		return 0;
 	}
 	count = (r<count)?r:count; // TO CHANGE
@@ -81,7 +82,7 @@ int clipboard_paste(int clipboard_id, int region, void *buf, size_t count){
 
 
 int clipboard_wait(int clipboard_id, int region, void *buf, size_t count){
-	if(region < 0 || region > 9) return -1;
+	if(region < 0 || region > 9 || count <= 0 || clipboard_id < 0) return 0;
 
 	char toSend[2];
 	void * p = NULL;
