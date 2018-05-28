@@ -476,7 +476,13 @@ void listenChildren(){
 				childsList=new(childsList, newElm, reuseNode);
 				pthread_rwlock_unlock(&cLstLock);
 
-				pthread_create(&th, NULL, (void*)attend_clip, newElm);
+				if(pthread_create(&th, NULL, (void*)attend_clip, newElm) == -1){
+					fprintf(stderr, "[child listener] Couldn't create attend clipboard thread: %s\n", strerror(errno));
+					pthread_rwlock_wrlock(&cLstLock);
+					close(newElm->fd);
+					newElm->fd = -2;
+					pthread_rwlock_unlock(&cLstLock);
+				}
 
 				pthread_detach(th);
 			}
@@ -600,7 +606,8 @@ int main(int argc, char *argv[]){
 		// Create accept Clipboard threads
 		if(pthread_create(&threads, NULL, (void*)attend_app, (void*)cfd) != 0){
 			fprintf(stderr, "[main] Couldn't create app thread: %s\n", strerror(errno));
-			exit(EXIT_FAILURE);
+			close(*cfd);
+			free(cfd);
 		}
 		pthread_detach(threads);
 		
