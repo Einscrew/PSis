@@ -61,7 +61,7 @@ int recvMsg(int from, void ** buf){
 
 	memcpy(&size, s, sizeof(int));
 	//size should be changed @ this point
-	printf("[%d]->%d going to read from: %d\n", getpid(), size, from );
+	//printf("[%d]->%d going to read from: %d\n", getpid(), size, from );
 
 	if(size > 0 && size < INT_MAX){
 		*buf = mallocV(size, "recv tmp variables");
@@ -70,14 +70,14 @@ int recvMsg(int from, void ** buf){
 		
 		while (read < size){
 			if((n=recv(from, *buf+read, miss, 0)) <= 0){
-				printf("[%d]Error receiving\n", getpid());
+				//printf("[%d]Error receiving\n", getpid());
 				read = -1;
 				free(*buf);
 				*buf =NULL;
 				break;
 			}
 			if(n == 0){
-				printf("[%d]READING 0????\n", getpid());
+				//printf("[%d]READING 0????\n", getpid());
 				read = -1;
 				free(*buf);
 				*buf =NULL;
@@ -96,7 +96,7 @@ int recvMsg(int from, void ** buf){
 		*buf = NULL;
 		read = -1;
 	}
-	//printf("[%d]///////////////////////\n");
+	
 	free(s);
 	return read;
 }
