@@ -1,12 +1,12 @@
 #! /bin/bash
 for D in *; do
     if [ -d "${D}" ]; then
-    	for j in $(seq 0 1000)
+    	for j in $(seq 0 "$1")
     	do
-	        for region in $(seq 0 9)
+	        for i in $(seq 0 9)
 			do
 				r=$((RANDOM % 1000000))
-				./app -c "$D"/clipSocket -s "$r" -r "$region" -i c &
+				./app -c "$D"/clipSocket -s "$r" -r "$i" -i c &
 			done
 		done
     fi

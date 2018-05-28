@@ -29,7 +29,7 @@ int clipboard_connect(char * clipboard_dir){
 	strncpy(my_addr.sun_path, clipboard_dir, strlen(clipboard_dir));
 
 	if(connect(sfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr_un)) != 0){
-		printf("Couldn't open socket: %s\n", strerror(errno));
+		//printf("Couldn't open socket to communicate with Local clipboard: %s\n", strerror(errno));
 		return -1;
 	}
 	

@@ -477,6 +477,8 @@ void listenChildren(){
 				pthread_rwlock_unlock(&cLstLock);
 
 				pthread_create(&th, NULL, (void*)attend_clip, newElm);
+
+				pthread_detach(th);
 			}
 
 		}
@@ -567,6 +569,7 @@ int main(int argc, char *argv[]){
 						fprintf(stderr, "[main] Error creating thread to attend parent clipboard\n");
 						exit(EXIT_FAILURE);
 					}
+					pthread_detach(threads);
 				}
 			}
 		}
@@ -578,6 +581,7 @@ int main(int argc, char *argv[]){
 		fprintf(stderr, "[main] Error creating thread to listen clipboards\n");
 		exit(EXIT_FAILURE);
 	}
+	pthread_detach(threads);
 
 	afd = createListenerUnix();
 
@@ -594,10 +598,11 @@ int main(int argc, char *argv[]){
 
 		appsList = new(appsList, cfd, NULL); // add in the head
 		// Create accept Clipboard threads
-		if(pthread_create(&threads, NULL, (void*)attend_app, (void*)&cfd) != 0){
+		if(pthread_create(&threads, NULL, (void*)attend_app, (void*)cfd) != 0){
 			fprintf(stderr, "[main] Couldn't create app thread: %s\n", strerror(errno));
 			exit(EXIT_FAILURE);
 		}
+		pthread_detach(threads);
 		
 	}	
 }

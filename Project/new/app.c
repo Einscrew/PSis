@@ -23,6 +23,7 @@ int main(int argc, char*argv[]){
 			    case 'c':
 					fd = clipboard_connect(optarg);
 					if(fd == -1){
+						printf("[%d]Error connecting\n", getpid());
 						exit(EXIT_FAILURE);
 					}
 			        break;
