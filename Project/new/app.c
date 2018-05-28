@@ -22,6 +22,9 @@ int main(int argc, char*argv[]){
 		    switch (opt) {
 			    case 'c':
 					fd = clipboard_connect(optarg);
+					if(fd == -1){
+						exit(EXIT_FAILURE);
+					}
 			        break;
 			    case 'f':
 			    	printf("FILE\n");

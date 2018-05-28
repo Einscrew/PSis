@@ -70,24 +70,32 @@ t_list  *new(t_list* lp, Item this, int reuseNode(Item))
     }
     else
     {
-        aux=lp;
+        if(reuseNode == NULL){
+            t_list * new = (t_list*) mallocV(sizeof(t_list), ": new list node");
 
-        while(1){
-            if(reuseNode(aux->this)){
-            	free(aux->this);
-            	aux->this = this;
-            	return lp;
+            new->this = this;
+            new->prox=lp;
+            lp = new;
+        }else{
+
+            aux=lp;
+            while(1){
+                if(reuseNode(aux->this)){
+                	free(aux->this);
+                	aux->this = this;
+                	return lp;
+                }
+                if(aux->prox == NULL)
+                	break;
+                aux=aux->prox;
             }
-            if(aux->prox == NULL)
-            	break;
-            aux=aux->prox;
+            t_list * new = (t_list*) mallocV(sizeof(t_list), ": new list node");
+
+            new->this = this;
+            aux->prox=new;
+            new->prox = NULL;
         }
 
-        t_list * new = (t_list*) mallocV(sizeof(t_list), ": new list node");
-
-        new->this = this;
-        aux->prox=new;
-        new->prox = NULL;
 
     }
     return lp;
@@ -143,37 +151,31 @@ t_list *next(t_list *p)
  * Description: free list
  *
  *****************************************************************************/
-void libertaLista(t_list *lp, void freeItem(Item))
+void freeList(t_list *lp, void freeItem(Item))
 {
     t_list *aux, *newhead;  /* auxiliar pointers to travel through the list */
 
     for(aux = lp; aux != NULL; aux = newhead)
     {
         newhead = aux->prox;
-        freeItem(aux->this);
+        if(freeItem != NULL)freeItem(aux->this);
         free(aux);
     }
 
     return;
 }
 
-
-/******************************************************************************
- * VerificaMalloc ()
- *
- * Argumentos: teste - ponteiro para conteudo
- *
- * Return:  (void)
- *
- * Descrição: verifica se existiu espaço para a alocaçao feita
- *
- *****************************************************************************/
-void VerificaMalloc(Item teste)
+void closeFreeList(t_list *lp, void freeItem(Item), void closeItem(Item))
 {
-    if(teste==NULL)
+    t_list *aux, *newhead;  /* auxiliar pointers to travel through the list */
+
+    for(aux = lp; aux != NULL; aux = newhead)
     {
-
-        exit(0);
+        newhead = aux->prox;
+        closeItem(aux->this);
+        if(freeItem != NULL)freeItem(aux->this);
+        free(aux);
     }
-}
 
+    return;
+}

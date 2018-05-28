@@ -3,55 +3,118 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include <string.h>
+
 
 #include "utils.h"
 
 extern char *optarg;
 
+char * dados = NULL;
+int fd = -1;
+
+void sigint_handler(int n){
+    
+    if(dados != NULL) free(dados);
+	
+	clipboard_close(fd);
+    exit(EXIT_SUCCESS);
+}
+
 int main(int argc, char*argv[]){
 
-		char c, opt, done, s;
-		char dados[10];
-		int size = -1;
-		int fd = -1, i = 0;
-		void * p;
+	char c = 0, r= 'r';
+	int size = -1;
+	int read = 0;
+	size_t n = 0;
+	
+	struct sigaction act_INT;
+	act_INT.sa_handler = sigint_handler;
+	sigemptyset(&act_INT.sa_mask);
+	act_INT.sa_flags=0;
+	sigaction(SIGINT, &act_INT, NULL);
 
-		/*
-		char * p = malloc(808464432);
-		//printf("%c\n", (p==NULL)?'y':'n');
-		if(p!=NULL){
-			for (int i = 0; i < 808464432; ++i)
-			{
-				p[i]='0';
-			}
-			p[i-1] = '\0';
-			printf("%s\n",p );
-		}
-		exit(1);
-		*/
+	if(argc == 2){
 
-		while ((opt = getopt(argc, argv, "c:")) != -1) {
-		    switch (opt) {
-			    case 'c':
-					fd = clipboard_connect(optarg);
-			        break;
-			    default: /* '?' */
-			        fprintf(stderr, "Usage: %s [-c path/to/AF_UNIsocket]\n",
-			                argv[0]);
-			        exit(EXIT_FAILURE);
-		    }
-		}
-
+		fd = clipboard_connect(argv[1]);
 		if(fd == -1){
-			fprintf(stderr, "Usage: %s [-c path/to/AF_UNIsocket]\n",argv[0]);
+			fprintf(stderr, "Error: Bad UNIX socket\n");
 			exit(EXIT_FAILURE);
 		}
-		
-		printf("Insert option [c|p|w] region[0-9]\n");
-		while((c=getchar()) != 'q')		
-		{
+
+	}else{
+
+		fprintf(stderr, "Usage: %s path/to/AF_UNIsocket\n", argv[0]);
+		exit(EXIT_FAILURE);		
+	}
+
+	while(1){
+		c = 0;
+		r = 'r';
+		size = -1;
+		printf("Insert option [ c | p | w ]: ");
+		while(!(c == 'c' || c == 'p' || c == 'w')){
+			c = getchar();
+		}
+		printf("Insert region [ 0 - 9 ]: ");
+		while(r < '0' || r > '9'){
+			r = getchar();
+		}
+
+		while(getchar() != '\n'){}
+
+		if(c == 'c'){
+			printf("Terminate the content to copy with 'ESC':");
+			read = getdelim(&dados, &n, 27 ,stdin);
+			printf("\nread: %d -[", read-1);
+			fflush(stdout);
+			write(1, dados, read-1);
+			printf("]\n");
+			fflush(stdout);
+
+			printf("sent: %d\n", clipboard_copy(fd, r-'0', dados, read-1));
+			free(dados);
+			dados = NULL;
+			read = 0;
+
+		}else{
+			printf("How much to receive?: ");
+			while(size < 0 && (scanf("%d", &size) != 1)){
+
+			}
+			printf("Will receive %d bytes\n",size );
+			if( (dados = mallocV(size, ": size too big\n")) == NULL){
+
+			}else{
+				if(c == 'p'){
+					read = clipboard_paste(fd, r-'0', dados, size);
+				}
+				else{
+					read = clipboard_wait(fd, r-'0', dados, size);
+				}
+
+				if(read >= 0){
+					printf("> ");
+					fflush(stdout);
+					write(1, dados, read );
+					printf(" <\n");
+				}else{
+					printf("Couldn't perform the instruction\n");
+				}
+				free(dados);
+				dados = NULL;
+				read = 0;
+			}
+		}
+	}
+
+	exit(0);
+}
+
+/*2awndaliwdaw^
+size = -1;
 			if(c == 'c'){
 				done = 1;
 				while(done)		
@@ -59,14 +122,17 @@ int main(int argc, char*argv[]){
 					c=getchar();
 					if(c <= '9' && c >= '0'){
 						printf("Tell the size of the content to copy\n");
-						while(size < 0){
-							scanf("%d\n", &size);
+						while(size < 0 && scanf("%d\n", &size) == 1){
+							
 						}
 
 						p = mallocV(size, ": Couldn't allocate enought\n");
 						i = 0;
-						printf("Which char to send: \n"); fflush(stdout);
-						s=getchar();
+						printf("Which char to send: \n");
+						fflush(stdin);
+						s = '\n';
+						while (s == '\n')
+							s=getchar();
 						while(i < size){
 							memcpy(p+i, &s, 1);
 							i++;
@@ -111,37 +177,4 @@ int main(int argc, char*argv[]){
 				
 			}
 			if(c != '\n')printf("Insert option [c|p|w] region[0-9]\n");
-		}
-/*
-			clipboard_copy(fd, 6, "uma", 3);
-			sleep(1);
-
-			clipboard_copy(fd, 7, "dois", 4);
-			sleep(1);
-			
-			clipboard_copy(fd, 8, "ovo", 3);
-			sleep(1);
-			
-			clipboard_copy(fd, 9, "dois", 4);
-			sleep(1);
-			
-			clipboard_copy(fd, 5, "cinco", 5);
-			sleep(1);
-			
-			clipboard_paste(fd, 1, (void*)&dados, count);
-			printf("Received from [1] - %s||\n", dados);
-		*/
-		
-		close(fd);
-		exit(0);
-
-
-
-
-
-		//write(fd, dados, 10);
-		//clipboard_paste(fd, 0, dados, &dados_int);
-		//read(fd+1, &dados_int, sizeof(dados_int));
-		//printf("Received %d\n", dados_int);
-		
-	}
+			*/

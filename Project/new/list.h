@@ -32,7 +32,7 @@ t_list  *initList(void);
 t_list  *new(t_list* lp, Item this, int reuseNode(Item));
 Item getItem (t_list *p);
 t_list *next(t_list *p);
-void libertaLista(t_list *lp, void freeItem(Item));
-void VerificaMalloc(Item teste);
+void freeList(t_list *lp, void freeItem(Item));
+void closeFreeList(t_list *lp, void freeItem(Item), void closeItem(Item));
 
 #endif
