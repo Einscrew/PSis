@@ -15,6 +15,7 @@
 
 #include <pthread.h>
 
+#include "clipboard.h"
 #include "connection.h"
 #include "utils.h"
 #include "list.h"
@@ -96,12 +97,19 @@ void freeClipboard(){
 }
 
 void sigint_handler(int n){
+	char pathSocket[108];
 	close(parent_fd);
 	printf("[%d]Clipboard terminating\n", pid);
 	close(afd);
 	closeChildren();
 	closeApps();
 	freeClipboard();
+	
+	sprintf(pathSocket, "./%d/%s", getpid(), CLIPBOARD_SOCKET);
+	unlink(pathSocket);
+	
+	sprintf(pathSocket, "./%d", getpid());
+	rmdir(pathSocket);
 	exit(EXIT_SUCCESS);
 }
 
@@ -544,6 +552,11 @@ int main(int argc, char *argv[]){
 	sigemptyset(&act_INT.sa_mask);
 	act_INT.sa_flags=0;
 	sigaction(SIGINT, &act_INT, NULL);
+
+	act_INT.sa_handler = sigint_handler;
+	sigemptyset(&act_INT.sa_mask);
+	act_INT.sa_flags=0;
+	sigaction(SIGTERM, &act_INT, NULL);
 
 	void (*old_handler)(int);
 	if( (old_handler = signal(SIGPIPE, SIG_IGN)) == SIG_ERR) {
