@@ -83,7 +83,8 @@ void closeApps(){
 }
 
 void freeClipboard(){
-	for ( int region = 0; region < 10; ++region)
+	int region = 0;
+	for ( region = 0; region < 10; ++region)
 	{
 		pthread_rwlock_wrlock(&cliplock[region]);
 		if(clip[region].data != NULL){
@@ -114,8 +115,9 @@ void sigint_handler(int n){
 }
 
 void printClipboard(){
+	int i = 0;
 	printf("[%d]-----------------------------------\n", pid);
-	for ( int i = 0; i < 10; ++i)
+	for ( i = 0; i < 10; ++i)
 	{
 		pthread_rwlock_rdlock(&cliplock[i]);
 		printf("[%d]>[%d]-[%.*s]-[%d]\n", pid, i, clip[i].size, clip[i].data, clip[i].size);
@@ -382,11 +384,11 @@ void attend_clip(void * arg){
 		if(b_size > 2){
 			buf = mallocV(b_size, ": attend sync" );
 			memcpy(buf, clip[i].data-2, b_size);
+			pthread_mutex_lock(&(elm->fdMutex));
 		}
 		pthread_rwlock_unlock(&cliplock[i]);
 
 		if(b_size > 2){	
-			pthread_mutex_lock(&(elm->fdMutex));
 			r = sendMsg(elm->fd, buf, b_size);
 			pthread_mutex_unlock(&(elm->fdMutex));
 				
