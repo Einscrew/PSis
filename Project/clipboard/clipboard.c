@@ -67,10 +67,18 @@ void closeChild(Item i){
 	close(e->fd);
 }
 
+/*****************************************************************************************
+*                     This function closes cliboard file descriptors                     *
+* Returns: void                                                                          *          		                                     
+*****************************************************************************************/
 void closeChildren(){
-	pthread_rwlock_wrlock(&cLstLock);
+	if(pthread_rwlock_wrlock(&cLstLock)!= 0){
+		fprintf(stderr, "[%d]Error wrlock clipboard list\n", pid);
+	}
 	closeFreeList(childsList, freeItem, closeChild);
-	pthread_rwlock_unlock(&cLstLock);
+	if(pthread_rwlock_unlock(&cLstLock)!= 0){
+		fprintf(stderr, "[%d]Error unlock clipboard list\n", pid);
+	}
 }
 
 void closeApp(Item i){
@@ -82,6 +90,10 @@ void closeApps(){
 	closeFreeList(appsList, freeItem, closeApp);
 }
 
+/*****************************************************************************************
+*                        This function frees the local clipboard	                     *
+* Returns: void                                                                          *          		                                     
+*****************************************************************************************/
 void freeClipboard(){
 	int region = 0;
 	for ( region = 0; region < 10; ++region)
@@ -97,6 +109,15 @@ void freeClipboard(){
 	}
 }
 
+
+/*****************************************************************************************
+*                This function frees the memory, closes file descriptors                 *
+* 					   unlinks sockets and removes directories                           *
+*																						 *
+* Parameters: n - interruption code                                                      *
+*																						 *
+* Returns: void                                                                          *          		                                     
+*****************************************************************************************/
 void sigint_handler(int n){
 	char pathSocket[108];
 	close(parent_fd);
@@ -107,13 +128,22 @@ void sigint_handler(int n){
 	freeClipboard();
 	
 	sprintf(pathSocket, "./%d/%s", getpid(), CLIPBOARD_SOCKET);
-	unlink(pathSocket);
+	if(unlink(pathSocket) == -1){
+		fprintf(stderr, "[%d]Error unlink AF_UNIX socket: %s\n", pid, strerror(errno));
+	}
 	
 	sprintf(pathSocket, "./%d", getpid());
-	rmdir(pathSocket);
+	if(rmdir(pathSocket) == -1){
+		fprintf(stderr, "[%d]Error removing process directory: %s\n", pid, strerror(errno));
+	}
 	exit(EXIT_SUCCESS);
 }
 
+/*****************************************************************************************
+*                                 Prints local clipboard                                 *
+*																						 *
+* Returns: void                                                                          *          		                                     
+*****************************************************************************************/
 void printClipboard(){
 	int i = 0;
 	printf("[%d]-----------------------------------\n", pid);
@@ -126,11 +156,22 @@ void printClipboard(){
 
 }
 
+/*****************************************************************************************
+*                    Changes a certain region with the new request	                     *
+*                           with respect to thread serialization                         *
+*																						 *
+* Parameters: size - request size                                                        *
+*             request - request content
+*																						 *
+* Returns: void                                                                          *
+*****************************************************************************************/
 void changeRegion(int size, char * request){
 	int region = request[1]-'0';
 	
 	//lock da regiao
-	pthread_rwlock_wrlock(&cliplock[region]);
+	if(pthread_rwlock_wrlock(&cliplock[region]) != 0){
+		fprintf(stderr, "[%d]Error wrlock @ region: %d\n", pid, region);
+	}
 
 	printf("[%d]entering\n", pid);
 	if(clip[region].data != NULL){
@@ -153,7 +194,9 @@ void changeRegion(int size, char * request){
 	// Ensure clipboard list
 	pthread_cond_broadcast(&w[region]);
 
-	pthread_rwlock_unlock(&cliplock[region]);
+	if(pthread_rwlock_unlock(&cliplock[region]) != 0){
+		fprintf(stderr, "[%d]Error rw_unlock @ region: %d\n", pid, region);
+	}
 
 	if(size-2 == 0) free(request); //<----------------------------------
 }
@@ -161,25 +204,34 @@ void changeRegion(int size, char * request){
 void broadcastReq(int size, char * request, int fd){
 	int pfd = -1;
 	
-	pthread_rwlock_rdlock(&parentLock);
+	if(pthread_rwlock_rdlock(&parentLock) != 0){
+		fprintf(stderr, "[%d]Error rdlock parent_fd\n", pid);
+	}
 	pfd = parent_fd;	
-	pthread_rwlock_unlock(&parentLock);
+	if(pthread_rwlock_unlock(&parentLock)!= 0){
+		fprintf(stderr, "[%d]Error rw_unlock parent_fd\n", pid);
+	}
+
 
 
 	if(pfd == -1 || fd == pfd){ // dispatch to all children
 
-		pthread_rwlock_rdlock(&cLstLock);
-
 		Elm * curr = NULL, *prev = NULL;
-		
-		t_list* aux = childsList;
+		t_list* aux = NULL;
+
+		if(pthread_rwlock_rdlock(&cLstLock)!= 0){
+			fprintf(stderr, "[%d]Error rdlock clipboard List:\n", pid );
+		}
+		aux = childsList;
 		if(aux == NULL){	
 			printf("[%d] NO CHILDS TO ANSWER\n", pid);
 			changeRegion(size, request);
 		}
 		else{
 			prev = (Elm *)getItem(aux);
-			pthread_mutex_lock(&(prev->fdMutex));
+			if(pthread_mutex_lock(&(prev->fdMutex))!= 0){
+				fprintf(stderr, "[%d]Error mutex lock clipboard list:\n", pid );
+			}		
 			curr = prev;
 		}
 		
@@ -200,59 +252,75 @@ void broadcastReq(int size, char * request, int fd){
 			aux = next(aux);
 			if(aux != NULL){
 				curr = (Elm *)getItem(aux);
-				pthread_mutex_lock(&(curr->fdMutex));
+				if(pthread_mutex_lock(&(curr->fdMutex))!= 0){
+					fprintf(stderr, "[%d]Error locking clipboard List mutex\n", pid);
+				}		
 			}else{
 				changeRegion(size, request);
 			}
 
-			pthread_mutex_unlock(&(prev->fdMutex));
+			if(pthread_mutex_unlock(&(prev->fdMutex))!= 0){
+				fprintf(stderr, "[%d]Error unlock clipboard list mutex\n", pid);
+			}		
 			prev = curr;
 		}
 
-		pthread_rwlock_unlock(&cLstLock);
+		if(pthread_rwlock_unlock(&cLstLock)!= 0){
+			fprintf(stderr, "[%d]Error unlock clipboard list\n", pid);
+		}		
 
 	}else{ // dispatch to the parent
 
-		printf("[%d]Sending to parent\n", pid);
 		
-		pthread_rwlock_wrlock(&parentLock);
+		
+		if(pthread_rwlock_wrlock(&parentLock)!= 0){
+			fprintf(stderr, "[%d]Error wrlock clipboard List\n", pid);
+		}		
 		int s = sendMsg(parent_fd, request, size);
-		pthread_rwlock_unlock(&parentLock);
+		if(pthread_rwlock_unlock(&parentLock)!= 0){
+			fprintf(stderr, "[%d]Error rdlock clipboard List\n", pid);
+		}		
 		
 		if( s == -1){ //Father is dead
 			printf("[%d]Parent DEAD noticed by child??\n", pid);
 			if(pfd > 0)close(pfd);
-			pthread_rwlock_wrlock(&parentLock);
-			printf("[%d]Parent = -1 ..................\n", pid);
+			if(pthread_rwlock_wrlock(&parentLock)!= 0){
+				fprintf(stderr, "[%d]Error wrlock parent_fd\n", pid);
+			}
 			parent_fd = -1;
-			pthread_rwlock_unlock(&parentLock);
+			if(pthread_rwlock_unlock(&parentLock)!= 0){
+				fprintf(stderr, "[%d]Error unlock parent_fd\n", pid);
+			}
 		}else if(s == 0){
-			printf("[%d]0 send to par done\n", pid);
+			printf("[%d] sent  0 to parent\n", pid);
 		}else{
-			printf("[%d] send %d to par done\n", pid, s);
+			printf("[%d] sent %d to parent\n", pid, s);
 		}
 	}	
 }
 
 int waitRegion(int region, char ** content){
 	int size;
-	pthread_mutex_lock(&waitlock[region]);
-	pthread_cond_wait(&w[region], &waitlock[region]);
-	pthread_mutex_unlock(&waitlock[region]);
-	
-	/* NAO FUNCIONA?? PORQUÊ??????????????????????
-	pthread_mutex_t mu = PTHREAD_MUTEX_INITIALIZER;
-	
-	pthread_mutex_lock(&mu);
-	pthread_cond_wait(&w[region], &mu);
-	pthread_mutex_unlock(&mu);
-	*/
+	if(pthread_mutex_lock(&waitlock[region])!= 0){
+		fprintf(stderr, "[%d]Error lock wait mutex\n", pid);
+	}
+	if(pthread_cond_wait(&w[region], &waitlock[region])!= 0){
+		fprintf(stderr, "[%d]Error cond_wait\n", pid);
+	}
+	if(pthread_mutex_unlock(&waitlock[region])!= 0){
+		fprintf(stderr, "[%d]Error unlock wait mutex\n", pid);
+	}
 
-	pthread_rwlock_rdlock(&cliplock[region]);
+
+	if(pthread_rwlock_rdlock(&cliplock[region])!= 0){
+		fprintf(stderr, "[%d]Error rdlock region\n", pid);
+	}
 	size = clip[region].size;
 	*content = mallocV(size, ": wait regionutils.o");
 	memcpy(*content, clip[region].data, size);
-	pthread_rwlock_unlock(&cliplock[region]);
+	if(pthread_rwlock_unlock(&cliplock[region])!= 0){
+		fprintf(stderr, "[%d]Error unlock region\n", pid);
+	}
 	
 	return size;
 }
@@ -269,14 +337,18 @@ int handleRequest(int size, char* request, int fd){
 			break;
 
 		case 'P':
-			pthread_rwlock_rdlock(&cliplock[region]);
+			if(pthread_rwlock_rdlock(&cliplock[region])!= 0){
+				fprintf(stderr, "[%d]Error rdlock region\n", pid);
+			}
 			printf("[%d]on the write\n", pid);
 			b_size = clip[region].size;
 			buf = mallocV(b_size, ": paste tmp buf");
 			memcpy(buf, clip[region].data, b_size);
 			//sleep(5);
 			printf("[%d]leaving write\n", pid);
-			pthread_rwlock_unlock(&cliplock[region]);
+			if(pthread_rwlock_unlock(&cliplock[region])!= 0){
+				fprintf(stderr, "[%d]Error unlock region\n", pid);
+			}
 			
 			if(sendMsg(fd, buf, b_size) == -1){
 				close(fd);
@@ -305,9 +377,13 @@ int handleRequest(int size, char* request, int fd){
 void attend_parent(void * arg){
 	int n = 0, i;
 	char * msg = NULL;
-	pthread_rwlock_rdlock(&parentLock);
+	if(pthread_rwlock_rdlock(&parentLock)!= 0){
+		fprintf(stderr, "[%d]Error rdlock parent_fd\n", pid);
+	}
 	int pdf = parent_fd;
-	pthread_rwlock_unlock(&parentLock);
+	if(pthread_rwlock_unlock(&parentLock)!= 0){
+		fprintf(stderr, "[%d]Error unlock parent_fd\n", pid);
+	}
 
 	while ((n = recvMsg(pdf, (void**)&msg)) > 0){
 		printf("[%d]\n[from parent]>>>>>>>>>>>>>>>>>>>>>\n", pid);
@@ -329,15 +405,23 @@ void attend_parent(void * arg){
 			break;
 		}
 
-		pthread_rwlock_rdlock(&parentLock);
+		if(pthread_rwlock_rdlock(&parentLock)!= 0){
+			fprintf(stderr, "[%d]Error rdlock region\n", pid);
+		}
 		pdf = parent_fd;
-		pthread_rwlock_unlock(&parentLock);
+		if(pthread_rwlock_unlock(&parentLock)!= 0){
+			fprintf(stderr, "[%d]Error unlock region\n", pid);
+		}
 	}
 	printf("[%d][attend_parent] stop handle parent\n", pid);
-	pthread_rwlock_wrlock(&parentLock);
+	if(pthread_rwlock_wrlock(&parentLock)!= 0){
+		fprintf(stderr, "[%d]Error wrlock parent_fd\n", pid);
+	}
 	close(parent_fd);
 	parent_fd = -1;
-	pthread_rwlock_unlock(&parentLock);
+	if(pthread_rwlock_unlock(&parentLock)!= 0){
+		fprintf(stderr, "[%d]Error unlock parent_fd\n", pid);
+	}
 
 }
 
@@ -393,7 +477,7 @@ void attend_clip(void * arg){
 			pthread_mutex_unlock(&(elm->fdMutex));
 				
 			if(r == -1){
-				printf("[%d]Error attending clip\n", pid);
+				fprintf(stderr, "[%d]Error attending clip\n", pid);
 				close(elm->fd);
 				pthread_mutex_lock(&(elm->fdMutex));
 				elm->fd = -2;
@@ -433,14 +517,13 @@ void attend_clip(void * arg){
 		}	
 	}
 	if(close(elm->fd) != 0){
-		fprintf(stderr, "Error closing attend clip fd\n");
+		fprintf(stderr, " [%d]Error closing attend clip fd\n", pid);
 	}
 }
 
 int reuseNode(Item i){
 	Elm *e = (Elm*)i;
 	if(e->fd == -2){
-		printf("[%d]reusing node\n", pid); // DELETE
 		return 1;
 	}
 	else
@@ -451,7 +534,7 @@ int reuseNode(Item i){
 void listenChildren(){
 	int fd = setupParentListener();
 	if(fd == -1){
-		fprintf(stderr, "[child listener] Will not be able to accept other clipboards\n");
+		fprintf(stderr, "[%d][child listener] Will not be able to accept other clipboards\n", pid);
 		return;
 	}
 	int clip_fd;
@@ -462,8 +545,8 @@ void listenChildren(){
 
 	pthread_t th;
 	Elm * newElm=NULL;
-	if(pthread_rwlock_init(&cLstLock, NULL) == -1){
-		fprintf(stderr, "[child listener] Couldn't create list lock\n");
+	if(pthread_rwlock_init(&cLstLock, NULL) != 0){
+		fprintf(stderr, "[%d][child listener] Couldn't create list lock\n", pid);
 		exit(EXIT_FAILURE);
 	}
 
@@ -473,7 +556,7 @@ void listenChildren(){
 		while(1){
 			clip_fd = accept(fd, (struct sockaddr *) &cli_addr, &cli_addrlen);
 			if(clip_fd == -1){
-				fprintf(stderr, "[child listener] Couldn't accept clipboard connection: %s\n", strerror(errno));
+				fprintf(stderr, "[%d][child listener] Couldn't accept clipboard connection: %s\n", pid, strerror(errno));
 			}else{
 				printf("[%d]clipboard just connected [fd:%d]\n", pid, clip_fd);
 				fflush(stdout);
@@ -482,19 +565,29 @@ void listenChildren(){
 				newElm->fd = clip_fd;
 				pthread_mutex_init(&(newElm->fdMutex), NULL);
 
-				pthread_rwlock_wrlock(&cLstLock);
+				if(pthread_rwlock_wrlock(&cLstLock)!= 0){
+					fprintf(stderr, "[%d]Error wrlock clipboard list\n", pid);
+				}
 				childsList=new(childsList, newElm, reuseNode);
-				pthread_rwlock_unlock(&cLstLock);
-
-				if(pthread_create(&th, NULL, (void*)attend_clip, newElm) == -1){
-					fprintf(stderr, "[child listener] Couldn't create attend clipboard thread: %s\n", strerror(errno));
-					pthread_rwlock_wrlock(&cLstLock);
-					close(newElm->fd);
-					newElm->fd = -2;
-					pthread_rwlock_unlock(&cLstLock);
+				if(pthread_rwlock_unlock(&cLstLock)!= 0){
+					fprintf(stderr, "[%d]Error wrlock clipboard list\n", pid);
 				}
 
-				pthread_detach(th);
+				if(pthread_create(&th, NULL, (void*)attend_clip, newElm) == -1){
+					fprintf(stderr, "[%d][child listener] Couldn't create attend clipboard thread: %s\n", pid, strerror(errno));
+					if(pthread_rwlock_wrlock(&cLstLock)!= 0){
+						fprintf(stderr, "[%d]Error wrlock clipboard list\n", pid);
+					}
+					close(newElm->fd);
+					newElm->fd = -2;
+					if(pthread_rwlock_unlock(&cLstLock)!= 0){
+						fprintf(stderr, "[%d]Error unlock clipboard list\n", pid);
+					}
+				}
+
+				if(pthread_detach(th)!= 0){
+					fprintf(stderr, "[%d]Error couldn't detach attend_clip thread\n", pid);
+				}
 			}
 
 		}
@@ -551,14 +644,22 @@ int main(int argc, char *argv[]){
 
 	struct sigaction act_INT;
 	act_INT.sa_handler = sigint_handler;
-	sigemptyset(&act_INT.sa_mask);
+	if(sigemptyset(&act_INT.sa_mask)!= 0){
+		fprintf(stderr, "[%d]Error setting up sigaction\n", pid);
+	}
 	act_INT.sa_flags=0;
-	sigaction(SIGINT, &act_INT, NULL);
+	if(sigaction(SIGINT, &act_INT, NULL)!= 0){
+		fprintf(stderr, "[%d]Error setting up sigaction\n", pid);
+	}
 
 	act_INT.sa_handler = sigint_handler;
-	sigemptyset(&act_INT.sa_mask);
+	if(sigemptyset(&act_INT.sa_mask)!= 0){
+		fprintf(stderr, "[%d]Error setting up sigaction\n", pid);
+	}
 	act_INT.sa_flags=0;
-	sigaction(SIGTERM, &act_INT, NULL);
+	if(sigaction(SIGTERM, &act_INT, NULL)!= 0){
+		fprintf(stderr, "[%d]Error setting up sigaction\n", pid);
+	}
 
 	void (*old_handler)(int);
 	if( (old_handler = signal(SIGPIPE, SIG_IGN)) == SIG_ERR) {
@@ -590,7 +691,9 @@ int main(int argc, char *argv[]){
 						fprintf(stderr, "[main] Error creating thread to attend parent clipboard\n");
 						exit(EXIT_FAILURE);
 					}
-					pthread_detach(threads);
+					if(pthread_detach(threads)!= 0){
+						fprintf(stderr, "[%d]Error detaching listen parent thread\n", pid);
+					}
 				}
 			}
 		}
@@ -602,7 +705,9 @@ int main(int argc, char *argv[]){
 		fprintf(stderr, "[main] Error creating thread to listen clipboards\n");
 		exit(EXIT_FAILURE);
 	}
-	pthread_detach(threads);
+	if(pthread_detach(threads) != 0){
+		fprintf(stderr, "[%d]Error detaching listen clipboardss	 thread\n", pid);
+	}
 
 	afd = createListenerUnix();
 
@@ -624,7 +729,9 @@ int main(int argc, char *argv[]){
 			close(*cfd);
 			free(cfd);
 		}
-		pthread_detach(threads);
+		if(pthread_detach(threads) != 0){
+			fprintf(stderr, "[%d]Error detaching attend_app thread\n", pid);
+		}
 		
 	}	
 }
