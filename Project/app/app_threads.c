@@ -24,7 +24,13 @@ bool is_dir(const char* path) {
 void overload(void*arg){
 	int * fd = (int*)arg;
 	printf("ola%d %d\n", *fd, msg);
-	sleep(1);
+	int i = msg;
+	char dados[100];
+	sprintf(dados, "%ld", random());
+	while(i > 0 && clipboard_copy(*fd, random()%10, dados, strlen(dados)) != -1){
+		sprintf(dados, "%lu", random());
+		i--;
+	}
 	close(*fd);
 	free(fd);
 }
@@ -78,6 +84,7 @@ int main(int argc, char*argv[]){
  
     closedir(dr);
 
+    pause();
 	return 0;
 		
 }
