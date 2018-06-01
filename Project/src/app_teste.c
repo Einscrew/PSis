@@ -68,11 +68,7 @@ int main(int argc, char*argv[]){
 		if(c == 'c'){
 			printf("Terminate the content to copy with 'ESC':");
 			read = getdelim(&dados, &n, 27 ,stdin);
-			printf("\nread: %d -[", read-1);
-			fflush(stdout);
-			write(1, dados, read-1);
-			printf("]\n");
-			fflush(stdout);
+			printf("\nread: %d -[%.*s]\n", read-1, read-1, dados);	
 
 			printf("sent: %d\n", clipboard_copy(fd, r-'0', dados, read-1));
 			free(dados);
@@ -96,10 +92,7 @@ int main(int argc, char*argv[]){
 				}
 
 				if(read >= 0){
-					printf("> ");
-					fflush(stdout);
-					write(1, dados, read );
-					printf(" <\n");
+					printf(">%.*s<\n", read, dados);
 				}else{
 					printf("Couldn't perform the instruction\n");
 				}
@@ -112,69 +105,3 @@ int main(int argc, char*argv[]){
 
 	exit(0);
 }
-
-/*2awndaliwdaw^
-size = -1;
-			if(c == 'c'){
-				done = 1;
-				while(done)		
-				{
-					c=getchar();
-					if(c <= '9' && c >= '0'){
-						printf("Tell the size of the content to copy\n");
-						while(size < 0 && scanf("%d\n", &size) == 1){
-							
-						}
-
-						p = mallocV(size, ": Couldn't allocate enought\n");
-						i = 0;
-						printf("Which char to send: \n");
-						fflush(stdin);
-						s = '\n';
-						while (s == '\n')
-							s=getchar();
-						while(i < size){
-							memcpy(p+i, &s, 1);
-							i++;
-						}
-
-						clipboard_copy(fd, c-'0', p, size);
-						printf("sendt\n");
-						done = 0;
-						free(p);
-					}
-				}
-			}else if(c == 'p'){
-				done = 1;
-				while(done)		
-				{
-					c=getchar();
-					if(c <= '9' && c >= '0'){
-						i = clipboard_paste(fd, c-'0', dados, 10);
-						
-						printf(">%s\n", dados);
-						done = 0;
-					}
-				}
-			}else if(c == 'w'){
-				done = 1;
-				while(done)		
-				{
-					c=getchar();
-					if(c <= '9' && c >= '0'){
-						i = clipboard_wait(fd, c-'0', dados, 10);
-						
-						printf(">%s\n", dados);
-						done = 0;
-					}
-				}
-			}else if(c == 'e'){
-				c=getchar();
-				
-					clipboard_copy(fd, -2, &c, 1);
-					printf("sendt\n");
-					done = 0;
-				
-			}
-			if(c != '\n')printf("Insert option [c|p|w] region[0-9]\n");
-			*/

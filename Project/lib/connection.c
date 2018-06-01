@@ -220,15 +220,15 @@ int setupParentListener(){
 	}
 
 	/* Reads the maximum port number availble */
-	fgets(buf, 6, ports);
-	if((sscanf(buf, "%d", &portM)) <= 0){
+	char * r = fgets(buf, 6, ports);
+	if(r == NULL || (sscanf(buf, "%d", &portM)) <= 0){
 		/* Assigns a default maximum port number */ 
 		portM = 8100;
 	}
 
 	/* Reads the minimum port number available */
-	fgets(buf, 6, ports);
-	if((sscanf(buf, "%d", &portm)) <= 0){
+	r = fgets(buf, 6, ports);
+	if(r == NULL || (sscanf(buf, "%d", &portm)) <= 0){
 		/* Assigns a default minimum port number */
 		portm = 8000;
 	}

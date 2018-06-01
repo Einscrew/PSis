@@ -11,7 +11,7 @@
 
 #include <string.h>
 
-#include "clipboard.h"
+#include "../lib/clipboard.h"
 
 int msg = 0;
 

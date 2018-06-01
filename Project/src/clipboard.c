@@ -15,10 +15,10 @@
 
 #include <pthread.h>
 
-#include "../lib/clipboard.h"
-#include "../lib/connection.h"
-#include "../lib/utils.h"
-#include "../lib/list.h"
+#include "clipboard.h"
+#include "connection.h"
+#include "utils.h"
+#include "list.h"
 
 #define VERBOSE 0
 

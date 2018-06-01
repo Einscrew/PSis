@@ -66,9 +66,13 @@ int main(int argc, char*argv[]){
 					fseek(f,0,SEEK_END); //go to end
 					index = ftell(f); //get position at end (length)
 					
-					rewind(f);//,0,SEEK_SET); //go to beg.
+					rewind(f);
 					
-					fread(dados,index,1,f); //read into buffer
+					if(fread(dados,index,1,f) == 0){
+						fprintf(stderr, "Couldn't read entire file\n");
+						fclose(f);
+						exit(EXIT_FAILURE);	
+					}
 					fclose(f);
 				}
 				//printf("cpy\n");
@@ -80,11 +84,11 @@ int main(int argc, char*argv[]){
 				break;
 			case 'p':
 				index = clipboard_paste(fd, r, &dados, SIZE);
-				write(1, dados, index);
+				printf("%*.s\n", index, dados);
 				break;
 			case 'w':
 				index = clipboard_wait(fd, r, &dados, SIZE);
-				write(1, dados, index);
+				printf("%*.s\n", index, dados);
 				break;
 			default:
 				fprintf(stderr, "Not a valid instruction [%c]\n", c);	
