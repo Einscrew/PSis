@@ -1,16 +1,3 @@
-/******************************************************************************
- *
- * File Name: lista.c
- *	      (c) 2009 AED
- * Authors:    AED Team
- * Last modified: ACR 2009-03-23
- * Revision:  v2.0
- *
- * COMMENTS
- *		implements functions for type t_list
- *
- *****************************************************************************/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
@@ -19,57 +6,47 @@
 #include "list.h"
 
 
-/* Linked list  */
+/* Linked list structure */
 struct _t_list
 {
     Item this;
     struct _t_list *prox;
 };
 
-/******************************************************************************
- * iniLista ()
- *
- * Arguments: none
- * Returns: t_list *
- * Side-Effects: list is initialized
- *
- * Description: initializes list
- *
- *****************************************************************************/
+/*******************************************
+ *   Initializes a list   				   *
+ *										   *
+ * Returns: t_list *  				       *
+ ******************************************/
 
-t_list  *initList(void)
-{
+t_list  *initList(void){
 
     return NULL;
 }
 
 /******************************************************************************
- * criaNovoNoListaNoFim ()
- *
- * Arguments: lp - lista a que adiciona novo elemento
- *            this - conteudo do novo elemento
- * Returns: t_list  *
- *
- * Description: Cria novo nó no fim da lista
- *
+ *   This fucntion puts a node in the list 								      *
+ *   															      		  *
+ * Parameters: lp - head's list    											  *
+ *             this - content of the new element     						  *
+ *	           reuseNode() - function that checks if a node can be reused     *
+ *   															     		  *
+ * Returns: the head of the list   								      		  *
  *****************************************************************************/
-t_list  *new(t_list* lp, Item this, int reuseNode(Item))
-{
 
+t_list  *new(t_list* lp, Item this, int reuseNode(Item)){
 
 	t_list *aux;
 
-    /*Coloca-o como head da lista*/
-    if(lp==NULL)
-    {
+    /* Puts the node as the head of the list */
+    if(lp==NULL){
 	    t_list * new = (t_list*) mallocV(sizeof(t_list), ": new list node");
         new->this = this;
         lp=new;
         new->prox = NULL;
 
-    }
-    else
-    {
+    }else{
+
         if(reuseNode == NULL){
             t_list * new = (t_list*) mallocV(sizeof(t_list), ": new list node");
 
@@ -80,6 +57,8 @@ t_list  *new(t_list* lp, Item this, int reuseNode(Item))
 
             aux=lp;
             while(1){
+
+            	/* Checks if a node can be reused */
                 if(reuseNode(aux->this)){
                 	free(aux->this);
                 	aux->this = this;
@@ -89,70 +68,52 @@ t_list  *new(t_list* lp, Item this, int reuseNode(Item))
                 	break;
                 aux=aux->prox;
             }
+
             t_list * new = (t_list*) mallocV(sizeof(t_list), ": new list node");
 
             new->this = this;
             aux->prox=new;
             new->prox = NULL;
         }
-
-
     }
+
     return lp;
 }
 
+/*********************************************************
+ *    Gets a content of a specified element of the list  *
+ *   											         *
+ * Parameters: p -Element of the list  					 *
+ *		    										     *
+ * Returns: Content of the element  					 *
+ ********************************************************/
 
-
-
-/******************************************************************************
- * getItemLista ()
- *
- * Arguments: this - pointer to element
- * Returns: Item
- * Side-Effects: none
- *
- * Description: returns an Item from the list
- *
- *****************************************************************************/
-
-Item getItem (t_list *p)
-{
+Item getItem (t_list *p){
 
     return p -> this;
 }
 
+/***************************************************
+ *    Gets the next element of the list            *
+ *  											   *
+ * Parameters: p - element of the list             *
+ *												   *
+ * Returns: pointer to next element in the list    *
+ **************************************************/
 
-/******************************************************************************
- * getProxElementoLista ()
- *
- * Arguments: this - pointer to element
- * Returns: pointer to next element in list
- * Side-Effects: none
- *
- * Description: returns a pointer to an element of the list
- *
- *****************************************************************************/
-
-t_list *next(t_list *p)
-{
+t_list *next(t_list *p){
 
     return p -> prox;
 }
 
+/**********************************************************************
+ *    Frees the entire list 										  *
+ *			  												      	  *
+ * Arguments: lp - pointer to list   								  *
+ *            freeItem() - function to free the content of the Item   *
+ *********************************************************************/
 
-
-/******************************************************************************
- * libertaLista ()
- *
- * Arguments: lp - pointer to list
- * Returns:  (void)
- * Side-Effects: frees space occupied by list items
- *
- * Description: free list
- *
- *****************************************************************************/
-void freeList(t_list *lp, void freeItem(Item))
-{
+void freeList(t_list *lp, void freeItem(Item)){
     t_list *aux, *newhead;  /* auxiliar pointers to travel through the list */
 
     for(aux = lp; aux != NULL; aux = newhead)
@@ -165,9 +126,18 @@ void freeList(t_list *lp, void freeItem(Item))
     return;
 }
 
-void closeFreeList(t_list *lp, void freeItem(Item), void closeItem(Item))
-{
-    t_list *aux, *newhead;  /* auxiliar pointers to travel through the list */
+/**********************************************************************
+ *    Frees the entire list and closes file descriptors				  *
+ *			  												      	  *
+ * Arguments: lp - pointer to list   								  *
+ *            freeItem() - function to free the content of the Item   *
+ *            closeItem() - function that closes the file descriptors *
+ *********************************************************************/
+
+void closeFreeList(t_list *lp, void freeItem(Item), void closeItem(Item)){
+	
+	/* Auxiliar pointer to travel through the list */
+    t_list *aux, *newhead; 
 
     for(aux = lp; aux != NULL; aux = newhead)
     {
