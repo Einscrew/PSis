@@ -8,7 +8,7 @@ LIB=../lib
 all: $(ALL)
 
 #############################################################
-#						 Objects                            #
+#                        Objects                            #
 #############################################################
 app_threads: app_threads.c $(LIB)/connection.o $(LIB)/library.o $(LIB)/list.o $(LIB)/utils.o
 	$(CC) $^ -o $@ $(FLAGS) $(EXTRA)
