@@ -1,4 +1,0 @@
-the state of the processes is T (aka stopped by job control signal)
-if i send SIGCONT to the master, all die?!?!?!
-if i send SIGCONT to a child it becomes a zombie <defunt> to the care of its parent
-if it has childs, they are adopted by the bash???
